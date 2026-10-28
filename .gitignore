@@ -1,0 +1,21 @@
+# SwiftPM / Xcode
+.build/
+.swiftpm/
+*.xcodeproj/
+xcuserdata/
+DerivedData/
+Package.resolved
+
+# Build output
+dist/
+
+# macOS
+.DS_Store
+
+# Local files that must never be committed
+.env
+*.p12
+*.cer
+*.mobileprovision
+*.keychain-db
+diagnostics*.txt

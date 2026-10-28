@@ -1,0 +1,70 @@
+{
+  "schemaVersion": 4,
+  "value": {
+    "rows": [
+      {
+        "id": "bot-research",
+        "name": "Research Bot",
+        "description": "Finds vendors",
+        "avatarShape": "cloud",
+        "avatarColor": "blue",
+        "awaitingUserResponse": {
+          "id": "q-1001",
+          "type": "question",
+          "question": "I found three potential vendors. Which should I contact?",
+          "options": [
+            { "label": "Northwind Supply", "description": "Cheapest" },
+            { "label": "Acme Components" },
+            "Globex Parts"
+          ],
+          "updatedAt": 1730000000123
+        },
+        "hasUnread": true,
+        "unreadCount": 1,
+        "lastActivityAt": 1730000000000
+      },
+      {
+        "id": "bot-writer",
+        "name": "Writer",
+        "avatarShape": "heartchubby",
+        "avatarColor": "pink",
+        "avatarPhoto": { "kind": "file", "key": "0123456789abcdef0123456789abcdef" },
+        "awaitingUserResponse": null,
+        "hasUnread": true,
+        "unreadCount": 4,
+        "lastActivityAt": 1730000100
+      },
+      {
+        "id": "bot-ops",
+        "name": "Ops Bot",
+        "avatarShape": "mystery-shape",
+        "avatarColor": "#12AB34",
+        "awaitingUserResponse": {
+          "kind": "tool_approval",
+          "message": "Run the staging migration?",
+          "choices": ["Approve", "Deny"]
+        }
+      },
+      {
+        "id": "bot-hidden",
+        "name": "Archived Helper",
+        "isHiddenFromSidebar": true,
+        "awaitingUserResponse": { "question": "Still there?" }
+      },
+      {
+        "id": "bot-evil",
+        "name": "Path Trick",
+        "avatarPhoto": { "kind": "file", "key": "../../../../etc/passwd" },
+        "awaitingUserResponse": {}
+      },
+      { "id": "", "name": "No id" },
+      { "id": "bot-noname", "name": "   " },
+      { "name": "Missing id" },
+      {
+        "id": 42,
+        "name": "Numeric Id Bot",
+        "awaitingUserResponse": false
+      }
+    ]
+  }
+}

@@ -1,0 +1,19 @@
+name: Feature request
+description: Suggest an idea for BotPeek
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem would this solve?
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would you like BotPeek to do?
+  - type: textarea
+    id: notes
+    attributes:
+      label: Anything else?
+      description: Keep in mind BotPeek's principles — appear only when needed, stay private, never pretend.

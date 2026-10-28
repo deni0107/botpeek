@@ -1,0 +1,89 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  core-linux:
+    name: Core tests (Linux)
+    runs-on: ubuntu-latest
+    container: swift:6.0-jammy
+    steps:
+      - uses: actions/checkout@v4
+      - run: swift test
+
+  macos:
+    name: Build & test (${{ matrix.name }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Apple silicon
+            runner: macos-15
+          - name: Intel
+            runner: macos-15-intel
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Toolchain
+        run: |
+          sw_vers
+          xcodebuild -version
+          swift --version
+      - name: Test
+        run: swift test
+      - name: Build app (native architecture)
+        run: swift build -c release --product BotPeek
+
+  app:
+    name: Universal app bundle
+    needs: macos
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Build universal app
+        env:
+          VERSION: 0.0.0-ci.${{ github.run_number }}
+        run: ./scripts/build-app.sh
+      - name: Package
+        env:
+          VERSION: 0.0.0-ci.${{ github.run_number }}
+        run: ./scripts/package.sh
+      - name: Smoke test
+        run: |
+          dist/BotPeek.app/Contents/MacOS/BotPeek --version
+          dist/BotPeek.app/Contents/MacOS/BotPeek --check
+      - uses: actions/upload-artifact@v4
+        with:
+          name: BotPeek-ci-${{ github.run_number }}
+          path: |
+            dist/*.dmg
+            dist/*.zip
+            dist/SHA256SUMS.txt
+          if-no-files-found: error
+          retention-days: 14
+
+  intel-smoke:
+    name: Universal app runs on Intel
+    needs: app
+    runs-on: macos-15-intel
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: BotPeek-ci-${{ github.run_number }}
+      - run: |
+          ditto -x -k BotPeek-*.zip .
+          BotPeek.app/Contents/MacOS/BotPeek --version
+          BotPeek.app/Contents/MacOS/BotPeek --check

@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 9,
+  "value": {
+    "rows": [
+      {
+        "id": "bot-research",
+        "name": "Research Bot",
+        "avatar": { "style": "nebula" },
+        "pendingInteraction": { "question": "This field name is not the one BotPeek knows." },
+        "newField": [1, 2, 3]
+      }
+    ]
+  }
+}

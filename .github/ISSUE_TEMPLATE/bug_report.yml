@@ -1,0 +1,51 @@
+name: Bug report
+description: Something doesn't work as expected
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting! Please remove private information (bot names, message text) from screenshots and logs.
+        Security problems: please report privately instead (see SECURITY.md).
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What did you expect, and what happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. …
+        2. …
+  - type: dropdown
+    id: mode
+    attributes:
+      label: Mode
+      options:
+        - Live Grok Bot
+        - Demo mode
+    validations:
+      required: true
+  - type: input
+    id: versions
+    attributes:
+      label: Versions
+      description: BotPeek version, macOS version, Mac (Apple silicon / Intel), Grok Bot version
+      placeholder: BotPeek 0.1.0, macOS 15.1, M2, Grok Bot 1.4.2
+    validations:
+      required: true
+  - type: textarea
+    id: check
+    attributes:
+      label: Output of BotPeek --check
+      description: Run /Applications/BotPeek.app/Contents/MacOS/BotPeek --check in Terminal. It contains no names or message text.
+      render: text
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Diagnostics
+      description: Attach the file from menu bar → Export Diagnostics…, and screenshots if helpful.
