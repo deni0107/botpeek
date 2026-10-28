@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-label="BotPeek icon">
+  <defs>
+    <linearGradient id="tile" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#7870FA"/>
+      <stop offset="1" stop-color="#4033A8"/>
+    </linearGradient>
+    <linearGradient id="body" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFB53D"/>
+      <stop offset="1" stop-color="#FF851F"/>
+    </linearGradient>
+    <clipPath id="tileClip"><rect x="100" y="100" width="824" height="824" rx="185"/></clipPath>
+    <clipPath id="edgeClip"><rect x="0" y="0" width="646" height="1024"/></clipPath>
+  </defs>
+  <rect x="100" y="100" width="824" height="824" rx="185" fill="url(#tile)"/>
+  <g clip-path="url(#tileClip)">
+    <rect x="640" y="100" width="300" height="824" fill="#fff" fill-opacity=".14"/>
+    <g clip-path="url(#edgeClip)">
+      <ellipse cx="520" cy="594" rx="215" ry="209" fill="url(#body)"/>
+      <rect x="473" y="474" width="34" height="70" rx="17" fill="#fff"/>
+      <rect x="565" y="474" width="34" height="70" rx="17" fill="#fff"/>
+    </g>
+    <rect x="640" y="180" width="14" height="664" rx="7" fill="#fff" fill-opacity=".9"/>
+    <path d="M290 204 h190 a70 70 0 0 1 70 70 v30 a70 70 0 0 1 -70 70 h-10 l0 50 -70 -50 h-110 a70 70 0 0 1 -70 -70 v-30 a70 70 0 0 1 70 -70 z" fill="#fff"/>
+    <circle cx="322" cy="290" r="22" fill="#5B54DB"/>
+    <circle cx="384" cy="290" r="22" fill="#5B54DB"/>
+    <circle cx="446" cy="290" r="22" fill="#5B54DB"/>
+  </g>
+</svg>
