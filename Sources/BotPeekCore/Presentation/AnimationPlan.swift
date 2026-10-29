@@ -46,6 +46,9 @@ public struct AnimationPlan: Equatable, Sendable {
     public var entrance: [MotionPose]
     public var celebration: [MotionPose]
     public var exit: [MotionPose]
+    /// A small reminder wiggle for a request left unanswered. Empty when
+    /// nothing should move.
+    public var nudge: [MotionPose]
     /// Delay before the speech bubble appears.
     public var bubbleDelay: Double
     /// Whether anything moves (false under reduced motion).
@@ -56,6 +59,7 @@ public struct AnimationPlan: Equatable, Sendable {
     public var entranceDuration: Double { Self.duration(of: entrance) }
     public var celebrationDuration: Double { Self.duration(of: celebration) }
     public var exitDuration: Double { Self.duration(of: exit) }
+    public var nudgeDuration: Double { Self.duration(of: nudge) }
 
     static func duration(of steps: [MotionPose]) -> Double {
         var total = 0.0
@@ -83,6 +87,7 @@ public struct AnimationPlan: Equatable, Sendable {
                 entrance: [MotionPose(hidden: restingHidden, curve: .easeOut(duration: 0.25))],
                 celebration: [],
                 exit: [MotionPose(hidden: restingHidden, opacity: 0, curve: .easeIn(duration: 0.2))],
+                nudge: [],
                 bubbleDelay: 0.05,
                 usesMotion: false,
                 rest: rest
@@ -108,6 +113,11 @@ public struct AnimationPlan: Equatable, Sendable {
                     MotionPose(hidden: 0.1, scale: 1.04, curve: .spring(SpringSpec(response: 0.2, dampingFraction: 0.8))),
                     MotionPose(hidden: 1, scale: 0.92, rotationDegrees: 6, curve: .easeIn(duration: 0.28), delay: 0.12),
                 ],
+                nudge: [
+                    MotionPose(hidden: 0.08, rotationDegrees: -9, curve: .spring(SpringSpec(response: 0.22, dampingFraction: 0.5))),
+                    MotionPose(hidden: 0.08, rotationDegrees: 9, curve: .spring(SpringSpec(response: 0.22, dampingFraction: 0.5)), delay: 0.16),
+                    MotionPose(hidden: restingHidden, curve: .spring(SpringSpec(response: 0.35, dampingFraction: 0.7)), delay: 0.16),
+                ],
                 bubbleDelay: 0.55,
                 usesMotion: true,
                 rest: rest
@@ -123,6 +133,10 @@ public struct AnimationPlan: Equatable, Sendable {
                     MotionPose(hidden: restingHidden, scale: 1, curve: .spring(SpringSpec(response: 0.35, dampingFraction: 0.8)), delay: 0.25),
                 ],
                 exit: [MotionPose(hidden: 1, curve: .easeIn(duration: 0.3))],
+                nudge: [
+                    MotionPose(hidden: 0.06, curve: .spring(SpringSpec(response: 0.3, dampingFraction: 0.7))),
+                    MotionPose(hidden: restingHidden, curve: .spring(SpringSpec(response: 0.4, dampingFraction: 0.8)), delay: 0.3),
+                ],
                 bubbleDelay: 0.3,
                 usesMotion: true,
                 rest: rest
@@ -133,6 +147,7 @@ public struct AnimationPlan: Equatable, Sendable {
                 entrance: [MotionPose(hidden: restingHidden, curve: .easeOut(duration: 0.25))],
                 celebration: [],
                 exit: [MotionPose(hidden: 1, opacity: 0, curve: .easeIn(duration: 0.2))],
+                nudge: [],
                 bubbleDelay: 0.1,
                 usesMotion: true,
                 rest: rest

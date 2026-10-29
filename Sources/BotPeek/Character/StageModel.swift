@@ -13,6 +13,11 @@ protocol StageActions: AnyObject {
     func openInGrokBot()
     func showNext()
     func showPrevious()
+    /// Switches to a waiting bot from the stack.
+    func focus(_ id: RequestID)
+    /// The character is being dragged along the edge.
+    func dragChanged()
+    func dragEnded()
     func loadQuestion()
     func requestAccessibility()
 }
@@ -20,6 +25,14 @@ protocol StageActions: AnyObject {
 struct QueuePosition: Equatable {
     var index: Int
     var count: Int
+}
+
+/// Another bot waiting its turn, shown tucked against the edge.
+struct WaitingBot: Identifiable, Equatable {
+    var id: RequestID
+    var name: String
+    var avatar: AvatarSource
+    var waitingSince: Date
 }
 
 /// Everything the on-screen character and bubble display.
@@ -34,6 +47,8 @@ final class StageModel: ObservableObject {
     @Published var delivery: DeliveryState = .idle
     @Published var queue: QueuePosition?
     @Published var edge: ScreenEdge = .right
+    /// Upper half of a side edge: the bubble and stack hang below the character.
+    @Published var growsDown = false
     @Published var characterSize: CGFloat = 72
     @Published var isDemo = false
     @Published var canApproveInline = false
@@ -43,6 +58,14 @@ final class StageModel: ObservableObject {
     @Published var snoozeMinutes = 15
     @Published var reduceMotion = false
     @Published var isHovering = false
+    @Published var isHoveringBubble = false
+    /// Other waiting bots, next in line first, and how many more don't fit.
+    @Published var waiting: [WaitingBot] = []
+    @Published var waitingOverflow = 0
+    /// The bubble tucked itself away after a while without interaction.
+    @Published var isShrunk = false
+    /// Shown in the collapsed bubble when the global shortcut works.
+    @Published var shortcutHint: String?
 
     weak var actions: StageActions?
 

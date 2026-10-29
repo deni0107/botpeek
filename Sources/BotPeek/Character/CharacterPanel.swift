@@ -45,6 +45,10 @@ final class ClickThroughTracker {
     private weak var panel: NSPanel?
     private var globalMonitor: Any?
     private var localMonitor: Any?
+    /// Called as the pointer moves anywhere while a character is shown.
+    var onPointerMoved: (() -> Void)?
+    /// While the character is dragged, the panel keeps the mouse.
+    var isDragging = false
     /// Interactive rects in the panel's SwiftUI coordinate space (top-left origin).
     var interactiveRects: [CGRect] = [] {
         didSet { update() }
@@ -58,7 +62,10 @@ final class ClickThroughTracker {
         guard globalMonitor == nil else { return }
         let events: NSEvent.EventTypeMask = [.mouseMoved, .leftMouseDragged, .leftMouseDown]
         globalMonitor = NSEvent.addGlobalMonitorForEvents(matching: events) { [weak self] _ in
-            Task { @MainActor in self?.update() }
+            Task { @MainActor in
+                self?.update()
+                self?.onPointerMoved?()
+            }
         }
         localMonitor = NSEvent.addLocalMonitorForEvents(matching: events) { [weak self] event in
             self?.update()
@@ -76,7 +83,7 @@ final class ClickThroughTracker {
     }
 
     func update() {
-        guard let panel, panel.isVisible else { return }
+        guard let panel, panel.isVisible, !isDragging else { return }
         let mouse = NSEvent.mouseLocation
         let frame = panel.frame
         let point = CGPoint(x: mouse.x - frame.minX, y: frame.height - (mouse.y - frame.minY))

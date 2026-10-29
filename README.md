@@ -55,11 +55,19 @@ your Mac's screen, tells you what it needs, takes your reply, and hops back out 
   right conversation.
 - **Careful with approvals.** By default approvals open in Grok Bot. Opt in to approve or
   deny inline with a second, explicit confirmation of exactly which button will be pressed.
-- **Several bots at once.** One character at a time, a "1 of 3" switcher, snooze and
-  dismiss per request, and a list in the menu bar. Nothing is lost when you dismiss.
+- **Several bots at once.** The newest request always comes first. Other waiting bots
+  peek out beside it, tucked against the edge; hover to see who and how long they've
+  waited, click to switch. A new bot never replaces a reply you're writing: it waits
+  in the stack until you're done. Snooze and dismiss per request, a "1 of 3" switcher
+  and a list in the menu bar. Nothing is lost when you dismiss.
+- **Keyboard friendly.** ⌃⌥B opens the current request from any app; 1–9 pick an
+  answer, ⌘[ / ⌘] switch, ⌘L snoozes, ⌘D dismisses, ⌘O opens Grok Bot.
 - **Stays out of the way.** Never takes focus from your app, transparent areas are
-  click-through, works across Spaces, full-screen apps and multiple displays, respects
-  Reduce Motion, and has a minimal-animation mode.
+  click-through, the bubble tucks away after 30 seconds without interaction (an
+  occasional wiggle reminds you), drag the character along the edge to move it, it
+  follows the pointer to another display, works across Spaces and full-screen apps,
+  pauses from the menu bar, hides from screenshots and screen sharing where macOS
+  allows, respects Reduce Motion, and has a minimal-animation mode.
 - **Private.** No servers, analytics, tracking or network requests. Message text is never
   saved; diagnostics never contain messages or bot names.
 

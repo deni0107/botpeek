@@ -30,6 +30,49 @@ final class PanelPlacementTests: XCTestCase {
         XCTAssertTrue(small.contains(frame))
     }
 
+    func testStackRoomIsReservedAlongTheEdge() {
+        let bubble = CGSize(width: 312, height: 400)
+        let side = PanelPlacement.contentSize(characterSize: 72, bubbleSize: bubble, edge: .right)
+        XCTAssertGreaterThanOrEqual(side.height, 72 + PanelPlacement.stackLength(characterSize: 72))
+        let bottom = PanelPlacement.contentSize(characterSize: 72, bubbleSize: bubble, edge: .bottom)
+        XCTAssertGreaterThanOrEqual(bottom.width, 72 + PanelPlacement.stackLength(characterSize: 72) * 2, "character stays centered")
+    }
+
+    func testStackOverflow() {
+        let split = PanelPlacement.stack(Array(1...7))
+        XCTAssertEqual(split.shown, [1, 2, 3, 4])
+        XCTAssertEqual(split.overflow, 3)
+        XCTAssertEqual(PanelPlacement.stack([1]).overflow, 0)
+    }
+
+    func testPositionIsTheInverseOfFrame() {
+        let size = CGSize(width: 400, height: 300)
+        for edge in ScreenEdge.allCases {
+            for position in [0, 0.25, 0.5, 0.8, 1.0] {
+                let frame = PanelPlacement.frame(contentSize: size, edge: edge, position: position, visibleFrame: screen)
+                let anchor = PanelPlacement.dragAnchor(of: frame, edge: edge, growsDown: PanelPlacement.growsDown(edge: edge, position: position), characterSize: 72)
+                let back = PanelPlacement.position(forDragAnchor: anchor, edge: edge, contentSize: size, visibleFrame: screen)
+                XCTAssertEqual(back, position, accuracy: 0.0001, "\(edge) at \(position)")
+            }
+        }
+        let below = PanelPlacement.position(forDragAnchor: -500, edge: .right, contentSize: size, visibleFrame: screen)
+        XCTAssertEqual(below, 0, "dragging past the end clamps")
+    }
+
+    func testCharacterReachesBothEndsOfASideEdge() {
+        let tall = CGSize(width: 400, height: 450)
+        let top = PanelPlacement.frame(contentSize: tall, edge: .right, position: 1, visibleFrame: screen)
+        XCTAssertTrue(PanelPlacement.growsDown(edge: .right, position: 1), "the bubble hangs below near the top")
+        XCTAssertEqual(top.maxY, screen.maxY - 8, "character near the top of the screen")
+        let bottom = PanelPlacement.frame(contentSize: tall, edge: .right, position: 0, visibleFrame: screen)
+        XCTAssertEqual(bottom.minY, screen.minY + 8)
+        let middleUp = PanelPlacement.frame(contentSize: CGSize(width: 400, height: 380), edge: .left, position: 0.5, visibleFrame: screen)
+        let middleDown = PanelPlacement.frame(contentSize: CGSize(width: 400, height: 380), edge: .left, position: 0.5001, visibleFrame: screen)
+        let anchorUp = PanelPlacement.dragAnchor(of: middleUp, edge: .left, growsDown: false, characterSize: 72)
+        let anchorDown = PanelPlacement.dragAnchor(of: middleDown, edge: .left, growsDown: true, characterSize: 72)
+        XCTAssertEqual(anchorUp, anchorDown, accuracy: 0.5, "the character doesn't jump when the bubble flips")
+    }
+
     func testInwardDirections() {
         XCTAssertEqual(PanelPlacement.inwardDirection(for: .right).dx, -1)
         XCTAssertEqual(PanelPlacement.inwardDirection(for: .left).dx, 1)
@@ -46,6 +89,7 @@ final class AnimationPlanTests: XCTestCase {
             XCTAssertTrue(poses.allSatisfy { $0.hidden == AnimationPlan.restingHidden }, "no sliding")
             XCTAssertTrue(poses.allSatisfy { $0.rotationDegrees == 0 && $0.scale == 1 }, "no bounce or rotation")
             XCTAssertTrue(plan.celebration.isEmpty)
+            XCTAssertTrue(plan.nudge.isEmpty, "no reminder wiggle")
         }
     }
 
@@ -72,6 +116,9 @@ final class AnimationPlanTests: XCTestCase {
             XCTAssertLessThan(plan.entranceDuration, 1.5, "entrance must never become annoying")
             XCTAssertLessThan(plan.exitDuration, 1)
             XCTAssertLessThan(plan.celebrationDuration, 1.2)
+            XCTAssertLessThan(plan.nudgeDuration, 1)
+            XCTAssertEqual(plan.nudge.last?.hidden ?? AnimationPlan.restingHidden, AnimationPlan.restingHidden, "a nudge settles back at rest")
+            XCTAssertEqual(plan.nudge.last?.rotationDegrees ?? 0, 0)
         }
     }
 }
@@ -142,6 +189,16 @@ final class SettingsTests: XCTestCase {
         XCTAssertEqual(settings.edgePosition, 1)
         XCTAssertEqual(settings.animationIntensity, .lively)
         XCTAssertTrue(settings.isEnabled)
+    }
+
+    func testPauseRoundTripsAndExpires() throws {
+        var settings = BotPeekSettings()
+        XCTAssertFalse(settings.isPaused(at: date(0)))
+        XCTAssertTrue(settings.collapsesWhenIdle && settings.nudgesWhenIgnored && settings.hideFromScreenCapture)
+        settings.pausedUntil = date(100)
+        let decoded = try JSONDecoder().decode(BotPeekSettings.self, from: JSONEncoder().encode(settings))
+        XCTAssertTrue(decoded.isPaused(at: date(99)))
+        XCTAssertFalse(decoded.isPaused(at: date(100)), "characters return when the pause ends")
     }
 
     func testStoreRoundTrip() {

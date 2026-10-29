@@ -49,6 +49,19 @@ private struct GeneralSettings: View {
                     }
                 }
                 Toggle("Play a sound when a bot appears", isOn: $app.settings.soundsEnabled)
+                Toggle("Tuck the bubble away when I ignore it", isOn: $app.settings.collapsesWhenIdle)
+                Toggle("Wiggle now and then while a bot waits", isOn: $app.settings.nudgesWhenIgnored)
+                Text("The newest request always comes first. Other waiting bots peek out beside it; click one to switch.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+            Section("Keyboard") {
+                Toggle("\(GlobalHotKey.display) opens the current request from any app", isOn: $app.settings.globalShortcutEnabled)
+                if app.settings.globalShortcutEnabled && !app.globalShortcutRegistered {
+                    Text("Another app is already using \(GlobalHotKey.display), so this shortcut isn't available.")
+                        .font(.caption).foregroundStyle(.orange)
+                }
+                Text("With a request open: 1–9 pick an answer, ⌘[ and ⌘] switch requests, ⌘L snoozes, ⌘D dismisses, ⌘O opens Grok Bot, Esc closes.")
+                    .font(.caption).foregroundStyle(.secondary)
             }
             Section {
                 Toggle("Approve or deny inline (experimental)", isOn: $app.settings.allowInlineApprovals)
@@ -102,6 +115,8 @@ private struct AppearanceSettings: View {
                 Picker("Display", selection: $app.settings.screen) {
                     ForEach(ScreenChoice.allCases, id: \.self) { Text($0.title).tag($0) }
                 }
+                Text("You can also drag a character along the edge. With “Screen with the pointer”, it follows you to another display.")
+                    .font(.caption).foregroundStyle(.secondary)
             }
             Section("Character") {
                 Picker("Size", selection: $app.settings.characterSize) {
@@ -237,6 +252,11 @@ private struct PrivacySettings: View {
                 Label("Reads Grok Bot's local bot list read-only; never its credentials.", systemImage: "doc.text.magnifyingglass")
                 Label("Message text stays in memory and is never saved.", systemImage: "memorychip")
                 Label("Diagnostics contain events and errors only, never messages or bot names.", systemImage: "stethoscope")
+            }
+            Section("Screen sharing") {
+                Toggle("Hide characters from screenshots and screen sharing", isOn: $app.settings.hideFromScreenCapture)
+                Text("Best effort: older capture methods skip BotPeek, but some apps on newer macOS versions can still capture it. When presenting, pause characters from the menu bar to be sure.")
+                    .font(.caption).foregroundStyle(.secondary)
             }
             Section("About") {
                 LabeledContent("Version", value: AppInfo.version)

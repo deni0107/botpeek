@@ -33,15 +33,23 @@ final class StatusItemController: NSObject, NSMenuDelegate {
 
     private func updateButton() {
         statusItem.isVisible = app.settings.showMenuBarIcon
-        let waiting = app.requests.filter { request in
-            if case .answered = request.status { return false }
-            return true
+        // The same requests the characters show (and "1 of N" counts);
+        // snoozed and dismissed ones are listed in the menu, not counted.
+        let waiting = app.waiting.count
+        let setAside = app.requests.filter { request in
+            switch request.status {
+            case .snoozed, .dismissed: return true
+            default: return false
+            }
         }.count
         statusItem.button?.title = waiting > 0 ? " \(waiting)" : ""
-        statusItem.button?.appearsDisabled = !app.settings.isEnabled
-        statusItem.button?.toolTip = waiting > 0
-            ? "BotPeek: \(waiting) bot\(waiting == 1 ? "" : "s") waiting for you"
-            : "BotPeek"
+        statusItem.button?.appearsDisabled = !app.charactersActive
+        var tip = waiting > 0 ? "BotPeek: \(waiting) bot\(waiting == 1 ? "" : "s") waiting for you" : "BotPeek"
+        if setAside > 0 { tip += " (\(setAside) snoozed or dismissed)" }
+        if let until = app.settings.pausedUntil, app.settings.isPaused(at: Date()) {
+            tip += ". Paused until \(until.formatted(date: .omitted, time: .shortened))"
+        }
+        statusItem.button?.toolTip = tip
     }
 
     /// A small template glyph: a round character peeking past a vertical edge.
@@ -72,10 +80,10 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         menu.addItem(status)
         menu.addItem(.separator())
 
-        let open = app.requests.filter { request in
+        let open = RequestQueue.ordered(app.requests.filter { request in
             if case .answered = request.status { return false }
             return true
-        }
+        })
         if open.isEmpty {
             let none = NSMenuItem(title: "No bots need you right now", action: nil, keyEquivalent: "")
             none.isEnabled = false
@@ -102,6 +110,17 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         enabled.target = self
         enabled.state = app.settings.isEnabled ? .on : .off
         menu.addItem(enabled)
+
+        if let until = app.settings.pausedUntil, app.settings.isPaused(at: Date()) {
+            addItem(to: menu, "Resume Characters (Paused Until \(until.formatted(date: .omitted, time: .shortened)))", #selector(resume))
+        } else if app.settings.isEnabled {
+            let pause = NSMenuItem(title: "Pause Characters", action: nil, keyEquivalent: "")
+            let submenu = NSMenu()
+            addItem(to: submenu, "For 1 Hour", #selector(pauseHour))
+            addItem(to: submenu, "Until Tomorrow", #selector(pauseUntilTomorrow))
+            pause.submenu = submenu
+            menu.addItem(pause)
+        }
 
         let demo = NSMenuItem(title: "Demo Mode (Sample Bots)", action: #selector(toggleDemo), keyEquivalent: "")
         demo.target = self
@@ -132,7 +151,7 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     private func title(for request: AttentionRequest) -> String {
         var prompt = request.content.displayPrompt.replacingOccurrences(of: "\n", with: " ")
         if prompt.count > 48 { prompt = String(prompt.prefix(47)) + "…" }
-        var title = "\(request.bot.name) — \(prompt)"
+        var title = "\(request.bot.name) — \(prompt) · \(WaitTime.describe(since: request.firstSeen, now: Date()))"
         switch request.status {
         case .snoozed: title += " (snoozed)"
         case .dismissed: title += " (dismissed)"
@@ -152,6 +171,12 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     }
 
     @objc private func snoozeAll() { app.snoozeAll() }
+    @objc private func resume() { app.pause(until: nil) }
+    @objc private func pauseHour() { app.pause(until: Date().addingTimeInterval(3_600)) }
+    @objc private func pauseUntilTomorrow() {
+        let calendar = Calendar.current
+        app.pause(until: calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: Date())))
+    }
     @objc private func toggleEnabled() { app.settings.isEnabled.toggle() }
     @objc private func toggleDemo() { app.settings.demoMode.toggle() }
     @objc private func replayDemo() { app.replayDemo() }

@@ -12,7 +12,11 @@ integration await verification by beta testers.
 - Confirmation delay, fingerprint deduplication, wake grace period, and resolution when answered elsewhere
 - Speech bubble with multiple-choice answers, free-text replies, opt-in two-step inline approvals and "Open in Grok Bot"
 - Reply delivery through Accessibility with exact bot matching, heading checks, draft protection, clipboard and focus restoration, and verification before "Delivered"
-- Queue for several bots, snooze, dismiss, menu-bar list
+- Queue for several bots, newest first, with the others peeking out in a stack beside the active character (hover for name and wait time, click to switch); snooze, dismiss, menu-bar list with wait times
+- Bubble tucks away after 30 s idle, gentle reminder wiggles, quick snooze/dismiss on hover
+- Keyboard: ⌃⌥B global shortcut, 1–9 for answers, ⌘[ ⌘] ⌘L ⌘D ⌘O in the bubble
+- Drag the character along the edge; it follows the pointer to another display
+- Pause characters from the menu bar; hide from screenshots and screen sharing (best effort)
 - Right, bottom or left edge; multiple displays, Spaces and full screen; sizes; lively/subtle/minimal animation; Reduce Motion
 - Settings, first-run onboarding, Accessibility diagnostics, privacy-preserving diagnostics export, `--version` and `--check`
 - Demo mode with clearly labelled sample bots

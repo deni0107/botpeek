@@ -24,6 +24,8 @@ final class AppModel: ObservableObject {
     @Published var focusedRequestID: RequestID?
     /// Bumped when the user explicitly asks to see a request (menu or reopen).
     @Published private(set) var showRequestToken = 0
+    /// Whether the global shortcut is active (another app may own it).
+    @Published var globalShortcutRegistered = false
 
     let log = DiagnosticsLog()
     private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "BotPeek", category: "app")
@@ -38,6 +40,10 @@ final class AppModel: ObservableObject {
     private var watcher: DirectoryWatcher?
     private var isAsleep = false
     private var lastSnapshotAt = Date.distantPast
+    /// True while the user is writing a reply; new arrivals wait in the stack
+    /// instead of replacing the request being answered.
+    private var isComposing = false
+    private var arrivedWhileComposing = false
 
     /// Called after every change the character window and menu care about.
     var onEvents: (([AttentionEvent]) -> Void)?
@@ -160,8 +166,36 @@ final class AppModel: ObservableObject {
                 break
             }
         }
+        let before = Set(presentable.map(\.id))
         if requests != manager.requests { requests = manager.requests }
+        bringArrivalsToFront(since: before)
         onEvents?(events)
+    }
+
+    /// New notifications always come first: a request that wasn't on screen
+    /// before (new, a new question, back from snooze) becomes the current one,
+    /// unless the user is in the middle of a reply.
+    private func bringArrivalsToFront(since before: Set<RequestID>) {
+        guard presentable.contains(where: { !before.contains($0.id) }) else { return }
+        if isComposing {
+            arrivedWhileComposing = true
+        } else {
+            focusedRequestID = nil
+        }
+    }
+
+    /// The character window reports when a reply is being written, so the
+    /// request stays put until the user is done.
+    func setComposing(_ composing: Bool, request id: RequestID?) {
+        guard composing != isComposing else { return }
+        isComposing = composing
+        if composing {
+            if let id { focusedRequestID = id }
+        } else if arrivedWhileComposing {
+            arrivedWhileComposing = false
+            focusedRequestID = nil
+            Task { @MainActor [weak self] in self?.onEvents?([]) }
+        }
     }
 
     private func moveState(from old: RequestID, to new: RequestID) {
@@ -172,8 +206,25 @@ final class AppModel: ObservableObject {
 
     // MARK: Queue
 
+    /// What the characters show, newest arrival first.
     var presentable: [AttentionRequest] {
-        settings.isEnabled ? requests.filter(\.isPresentable) : []
+        charactersActive ? waiting : []
+    }
+
+    /// Requests still waiting on screen-worthy attention, whether or not
+    /// characters are currently shown. The menu bar counts these.
+    var waiting: [AttentionRequest] {
+        RequestQueue.ordered(requests.filter(\.isPresentable))
+    }
+
+    var charactersActive: Bool {
+        settings.isEnabled && !settings.isPaused(at: Date())
+    }
+
+    func pause(until date: Date?) {
+        settings.pausedUntil = date
+        log.record(.info, "app", date == nil ? "Characters resumed" : "Characters paused")
+        onEvents?([])
     }
 
     var currentRequest: AttentionRequest? {
@@ -194,19 +245,27 @@ final class AppModel: ObservableObject {
 
     func showNext() {
         guard let current = currentRequest else { return }
-        focusedRequestID = RequestQueue.next(after: current.id, in: presentable)
-        onEvents?([])
+        focus(RequestQueue.next(after: current.id, in: presentable))
     }
 
     func showPrevious() {
         guard let current = currentRequest else { return }
-        focusedRequestID = RequestQueue.previous(before: current.id, in: presentable)
+        focus(RequestQueue.previous(before: current.id, in: presentable))
+    }
+
+    /// The user picked a request (switcher or stack); that choice wins over
+    /// anything that arrived meanwhile.
+    func focus(_ id: RequestID?) {
+        arrivedWhileComposing = false
+        focusedRequestID = id
         onEvents?([])
     }
 
     /// From the menu bar: show this request now, even if snoozed or dismissed.
     func show(_ id: RequestID) {
         if !settings.isEnabled { settings.isEnabled = true }
+        if settings.isPaused(at: Date()) { settings.pausedUntil = nil }
+        arrivedWhileComposing = false
         manager.restore(id)
         requests = manager.requests
         focusedRequestID = id
