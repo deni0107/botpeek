@@ -5,7 +5,8 @@ import BotPeekCore
 /// The real integration with the Grok Bot desktop app.
 ///
 /// - Bots, avatars and attention state: read-only from Grok Bot's local roster cache.
-/// - Questions asked in chat: read-only from Grok Bot's cached conversations.
+/// - Questions asked in chat, with answer buttons or in plain text: read-only
+///   from Grok Bot's cached conversations.
 /// - Optional second attention signal: the sidebar label, via Accessibility.
 /// - Question text, choices and replies: Grok Bot's window, via Accessibility.
 final class LiveGrokIntegration: GrokIntegration {
@@ -18,6 +19,7 @@ final class LiveGrokIntegration: GrokIntegration {
     private let log: DiagnosticsLog
 
     var useSidebarSignal = true
+    var showsPlainTextQuestions = true
     var deliveryMethod: DeliveryMethod = .background
 
     private(set) var lastRoster: RosterSnapshot?
@@ -26,6 +28,9 @@ final class LiveGrokIntegration: GrokIntegration {
     private var sidebarRequestedAt: Date = .distantPast
     private var sidebarTask: Task<Void, Never>?
     static let sidebarInterval: TimeInterval = 6
+    /// A plain-text question shows only once the bot has been quiet this long,
+    /// so a bot that asks and then keeps going doesn't pop up.
+    static let plainQuestionSettleTime: TimeInterval = 8
 
     private lazy var replies = GrokReplyService(integration: self)
     var replyService: ReplyService { replies }
@@ -74,7 +79,11 @@ final class LiveGrokIntegration: GrokIntegration {
             sidebar = nil
         }
         let visible = roster.bots.filter { !$0.isHiddenFromSidebar }.map(\.id)
-        let conversations = conversationStore.openRequests(for: visible, rosterFile: roster.fileURL)
+        let conversations = conversationStore.openRequests(for: visible, rosterFile: roster.fileURL).filter { _, request in
+            guard request.isPlainText else { return true }
+            guard showsPlainTextQuestions else { return false }
+            return request.postedAt.map { now.timeIntervalSince($0) >= Self.plainQuestionSettleTime } ?? true
+        }
         return AttentionDetector.snapshot(
             roster: roster.bots,
             conversations: conversations,

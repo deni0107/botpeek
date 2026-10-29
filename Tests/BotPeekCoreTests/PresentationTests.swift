@@ -198,6 +198,9 @@ final class SettingsTests: XCTestCase {
         XCTAssertEqual(settings.edgePosition, 1)
         XCTAssertEqual(settings.animationIntensity, .lively)
         XCTAssertTrue(settings.isEnabled)
+        XCTAssertTrue(settings.showsPlainTextQuestions, "settings saved before the option existed show plain-text questions")
+        let off = try JSONDecoder().decode(BotPeekSettings.self, from: Data(#"{"showsPlainTextQuestions":false}"#.utf8))
+        XCTAssertFalse(off.showsPlainTextQuestions)
     }
 
     func testPauseRoundTripsAndExpires() throws {

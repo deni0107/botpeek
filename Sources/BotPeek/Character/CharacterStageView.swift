@@ -125,22 +125,11 @@ struct PeekingCharacter: View {
             .opacity(pose.opacity)
             .animation(.spring(response: 0.25, dampingFraction: 0.7), value: hover)
             .frame(width: size, height: size)
-            .contentShape(Rectangle())
-            .gesture(
-                // Drag along the edge to move the character; the spot is remembered.
-                DragGesture(minimumDistance: 4)
-                    .onChanged { _ in model.actions?.dragChanged() }
-                    .onEnded { _ in model.actions?.dragEnded() }
-            )
-            .onTapGesture {
-                if model.isExpanded { model.actions?.collapse() } else { model.actions?.expand() }
-            }
-            .onHover { model.isHovering = $0 }
-            .interactiveRegion()
-            .accessibilityElement()
-            .accessibilityLabel("\(model.botName) needs your attention")
-            .accessibilityHint(model.isExpanded ? "Collapses the reply" : "Opens the reply")
-            .accessibilityAddTraits(.isButton)
+            .modifier(CharacterInteraction(model: model, toggle: toggle))
+    }
+
+    private func toggle() {
+        if model.isExpanded { model.actions?.collapse() } else { model.actions?.expand() }
     }
 
     /// The badge sits at the top corner facing into the screen.
@@ -157,6 +146,32 @@ struct PeekingCharacter: View {
         case .left: return .leading
         case .bottom: return .bottom
         }
+    }
+}
+
+/// Click, drag, hover and the accessibility button of the peeking character.
+private struct CharacterInteraction: ViewModifier {
+    @ObservedObject var model: StageModel
+    let toggle: () -> Void
+
+    func body(content: Content) -> some View {
+        content
+            .contentShape(Rectangle())
+            .gesture(
+                // Drag along the edge to move the character; the spot is remembered.
+                DragGesture(minimumDistance: 4)
+                    .onChanged { _ in model.actions?.dragChanged() }
+                    .onEnded { _ in model.actions?.dragEnded() }
+            )
+            .onTapGesture(perform: toggle)
+            .onHover { model.isHovering = $0 }
+            .interactiveRegion()
+            .accessibilityElement()
+            .accessibilityLabel("\(model.botName) needs your attention")
+            .accessibilityHint(model.isExpanded ? "Collapses the reply" : "Opens the reply")
+            .accessibilityAddTraits(.isButton)
+            // A tap gesture alone gives VoiceOver, Voice Control and Switch Control nothing to press.
+            .accessibilityAction { toggle() }
     }
 }
 
@@ -279,6 +294,7 @@ private struct StackedAvatar: View {
             .accessibilityLabel("\(bot.name) is also waiting")
             .accessibilityHint("Shows this request")
             .accessibilityAddTraits(.isButton)
+            .accessibilityAction { model.actions?.focus(bot.id) }
     }
 
     private var labelAlignment: Alignment {
@@ -309,6 +325,7 @@ private struct OverflowChip: View {
             .help("\(count) more waiting. The menu bar lists them all.")
             .accessibilityLabel("\(count) more bots waiting")
             .accessibilityAddTraits(.isButton)
+            .accessibilityAction { model.actions?.showNext() }
     }
 }
 
@@ -353,7 +370,7 @@ struct BubbleShape: Shape {
     /// Side tails point at the character near the bubble's top instead of its bottom.
     var tailNearTop = false
     var radius: CGFloat = 18
-    static let tailSize: CGFloat = 9
+    static let tailSize: CGFloat = 11
 
     func path(in rect: CGRect) -> Path {
         let t = Self.tailSize
@@ -363,7 +380,7 @@ struct BubbleShape: Shape {
         case .leading: body.origin.x += t; body.size.width -= t
         case .bottom: body.size.height -= t
         }
-        var path = Path(roundedRect: body, cornerRadius: radius, style: .continuous)
+        let path = Path(roundedRect: body, cornerRadius: radius, style: .continuous)
         var tailPath = Path()
         switch tail {
         case .trailing:
@@ -383,8 +400,9 @@ struct BubbleShape: Shape {
             tailPath.addQuadCurve(to: CGPoint(x: x + 9, y: body.maxY - 2), control: CGPoint(x: x + 8, y: body.maxY + 1))
         }
         tailPath.closeSubpath()
-        path.addPath(tailPath)
-        return path
+        // One outline: drawn as two overlapping shapes, the border cut across
+        // the tail and made it look detached.
+        return path.union(tailPath)
     }
 }
 

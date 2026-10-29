@@ -16,12 +16,21 @@ import Foundation
 /// or `widgetDismissed`. Approvals (`auto-review-approval`) carry a `status`,
 /// forms (`user-form`) a `formResolution`.
 ///
+/// Bots also ask in plain text (`"message": { "type": "text", "content": "…?" }`),
+/// which Grok Bot doesn't mark as waiting at all. Those count when the message
+/// ends with a real question (see `PlainQuestion`); they are flagged so the app
+/// can wait a moment, in case the bot keeps talking, and let users turn them off.
+///
 /// A request counts as open only when it is the latest turn in the
 /// conversation, so an old question the user moved past never pops up.
 public enum ConversationRequestParser {
     public struct OpenRequest: Equatable, Sendable {
         public var fingerprint: String
         public var content: AttentionContent
+        /// Asked in an ordinary message rather than with answer buttons.
+        public var isPlainText = false
+        /// When the bot posted it, if Grok Bot recorded that.
+        public var postedAt: Date?
     }
 
     static let widgetResolutionKeys = ["respondedValue", "widgetSkipped", "widgetDismissed"]
@@ -42,7 +51,12 @@ public enum ConversationRequestParser {
         else { return nil }
 
         let content: AttentionContent?
+        var isPlainText = false
         switch message["type"]?.stringValue {
+        case "text":
+            guard let text = message["content"]?.stringValue, PlainQuestion.isQuestion(text) else { return nil }
+            content = AttentionContent(kind: .question, prompt: AwaitingRequestParser.clean(text), source: .conversation)
+            isPlainText = true
         case "widget":
             guard !isResolved(last, keys: widgetResolutionKeys), let widget = message["widget"] else { return nil }
             content = widgetContent(widget)
@@ -71,7 +85,13 @@ public enum ConversationRequestParser {
         guard let content else { return nil }
 
         let identity = [last["id"]?.identifierString ?? "", last["timestampMs"]?.identifierString ?? ""]
-        return OpenRequest(fingerprint: StableHash.fnv1a(identity.joined(separator: "|")), content: content)
+        let postedAt = last["timestampMs"]?.numberValue.map { Date(timeIntervalSince1970: $0 / 1_000) }
+        return OpenRequest(
+            fingerprint: StableHash.fnv1a(identity.joined(separator: "|")),
+            content: content,
+            isPlainText: isPlainText,
+            postedAt: postedAt
+        )
     }
 
     /// Entries that move the conversation on: the bot posting to the user, or
@@ -97,16 +117,45 @@ public enum ConversationRequestParser {
             (widget["options"]?.arrayValue ?? []).compactMap(AwaitingRequestParser.choice(from:))
                 .prefix(AwaitingRequestParser.maximumChoices)
         ))
-        // One button press can't answer a multi-select or multi-step widget,
-        // so show the options and take a typed answer instead.
-        let isMultiple = widget["multiSelect"]?.boolValue == true || widget["steps"]?.arrayValue?.isEmpty == false
-        if isMultiple || choices.isEmpty {
+        // A multi-step widget can't be answered from one list, so show its
+        // options and take a typed answer instead.
+        let isMultiStep = widget["steps"]?.arrayValue?.isEmpty == false
+        if isMultiStep || choices.isEmpty {
             let list = choices.map { "• " + $0.label }.joined(separator: "\n")
             let text = [prompt, list.isEmpty ? nil : list].compactMap { $0 }.joined(separator: "\n\n")
             return AttentionContent(kind: .question, prompt: text.isEmpty ? nil : text, source: .conversation)
         }
+        // Several answers are picked in BotPeek and sent as one typed reply.
+        if widget["multiSelect"]?.boolValue == true {
+            return AttentionContent(kind: .choice, prompt: prompt, choices: choices, source: .conversation, allowsMultipleChoices: true)
+        }
         let kind: AttentionKind = ApprovalHeuristics.looksLikeApproval(choices) ? .approval : .choice
         return AttentionContent(kind: kind, prompt: prompt, choices: choices, source: .conversation)
+    }
+}
+
+/// Decides whether an ordinary bot message is a question waiting for the user.
+///
+/// The message must end with a question: its last sentence ends in "?". Sign-off
+/// lines like "Anything else?" don't count, since nothing is blocked on them.
+public enum PlainQuestion {
+    static let signOffs = [
+        "anything else", "any other questions", "any questions", "anything i can help",
+        "help with anything", "else i can do", "else i can help",
+    ]
+
+    public static func isQuestion(_ text: String) -> Bool {
+        // Closing quotes, brackets and emoji may follow the question mark.
+        let trailing = CharacterSet.whitespacesAndNewlines
+            .union(CharacterSet(charactersIn: "\"'”’)]*_"))
+            .union(.symbols)
+        let trimmed = text.trimmingCharacters(in: trailing)
+        guard trimmed.hasSuffix("?") || trimmed.hasSuffix("？") else { return false }
+        let lastSentence = trimmed.dropLast()
+            .split(whereSeparator: { ".!?\n".contains($0) })
+            .last.map(String.init)?
+            .lowercased() ?? ""
+        return !signOffs.contains { lastSentence.contains($0) }
     }
 }
 

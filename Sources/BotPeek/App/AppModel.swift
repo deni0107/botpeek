@@ -31,7 +31,12 @@ final class AppModel: ObservableObject {
     private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "BotPeek", category: "app")
     private let settingsStore: SettingsStore
     private let dismissedStore: PersistentDismissedStore
-    private let manager: AttentionEventManager
+    /// The queue in use: live and demo requests are kept apart, so trying the
+    /// demo never touches real snoozes, dismissals or wait times, and demo
+    /// dismissals aren't remembered.
+    private var manager: AttentionEventManager
+    private let liveManager: AttentionEventManager
+    private let demoManager = AttentionEventManager()
     private let live: LiveGrokIntegration
     private var demo: DemoIntegration?
     private(set) var integration: GrokIntegration
@@ -53,7 +58,8 @@ final class AppModel: ObservableObject {
         dismissedStore = PersistentDismissedStore(store: defaults)
         let settings = settingsStore.load()
         self.settings = settings
-        manager = AttentionEventManager(dismissedStore: dismissedStore)
+        liveManager = AttentionEventManager(dismissedStore: dismissedStore)
+        manager = liveManager
         live = LiveGrokIntegration(log: log)
         integration = live
         health = live.health(now: Date())
@@ -78,14 +84,17 @@ final class AppModel: ObservableObject {
 
     private func configureIntegration() {
         live.useSidebarSignal = settings.useSidebarSignal
+        live.showsPlainTextQuestions = settings.showsPlainTextQuestions
         live.deliveryMethod = settings.deliveryMethod
         if settings.demoMode {
             let demo = self.demo ?? DemoIntegration()
             self.demo = demo
             integration = demo
+            manager = demoManager
             watcher = nil
         } else {
             integration = live
+            manager = liveManager
             watcher = DirectoryWatcher(url: live.paths.persistenceDirectory) { [weak self] in
                 self?.fileSystemChanged()
             }
@@ -390,17 +399,21 @@ final class AppModel: ObservableObject {
     private func applySettings(previous: BotPeekSettings) {
         if previous.demoMode != settings.demoMode {
             log.record(.info, "app", settings.demoMode ? "Demo mode on" : "Demo mode off")
-            manager.reset()
-            requests = []
+            if settings.demoMode {
+                demoManager.reset()
+                demo?.restart(at: Date())
+            }
             deliveryStates = [:]
             focusedRequestID = nil
-            if settings.demoMode { demo?.restart(at: Date()) }
             configureIntegration()
+            requests = manager.requests
             scheduleTimer()
             refresh()
         } else {
             live.useSidebarSignal = settings.useSidebarSignal
+            live.showsPlainTextQuestions = settings.showsPlainTextQuestions
             live.deliveryMethod = settings.deliveryMethod
+            if previous.showsPlainTextQuestions != settings.showsPlainTextQuestions { refresh() }
         }
         onEvents?([])
     }

@@ -2,9 +2,19 @@
 
 ## 0.1.0 — unreleased (beta)
 
-First public beta. Bot discovery, avatars, question detection and multiple-choice answers
-are checked on a real Mac with Grok Bot 0.78.1; typed replies and inline approvals await
-verification by beta testers.
+First public beta. Bot discovery, avatars, question detection, answers (choices, multi-select
+and typed replies) and inline approvals are checked on a real Mac with Grok Bot 0.78.1.
+
+- Shows questions bots ask in plain text, not only those with answer buttons, once the bot has been quiet for a few seconds; sign-offs like "Anything else?" don't count. Settings → General can turn this off
+- Multi-select questions show checkboxes and send the picked options together
+- Answers no longer fail with "Couldn't find the question" when the bot's conversation is already open in a background Grok Bot window
+- Closing the bubble (Esc, ✕ or ⌃⌥B) gives the keyboard back to the app you were using
+- VoiceOver, Voice Control and Switch Control can open a request from the character and switch to waiting bots
+- Long questions and long option labels scroll inside the bubble instead of being cut off; "Show full request" appears only when text is actually cut off
+- Bigger click targets for the request switcher, snooze, dismiss and close buttons
+- Sign-in forms and approvals offer one clear way to Grok Bot, with calmer wording and icon
+- Demo mode keeps its own queue: dismissed sample bots come back on replay, and leaving the demo keeps your real snoozes and wait times
+- The bubble's tail is drawn as part of the bubble
 
 - Detects questions, approvals and forms from Grok Bot's cached conversations: Grok Bot 0.78.1 doesn't set `awaitingUserResponse` for questions asked in chat. Approvals and forms open in Grok Bot only
 - Opens the right conversation when Grok Bot is in the background (0.78.1 applied each Accessibility press one press late) and recognizes 0.78.1's inline answer buttons

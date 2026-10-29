@@ -82,6 +82,14 @@ final class GrokAccessibilityDriver: @unchecked Sendable {
         var conversation = TranscriptParser.parse(window: snapshot.root)
         log.record(.debug, "ax", "Heading before opening \(bot.id.logTag): \(Self.describe(conversation.heading, bot: bot, roster: roster))")
         if BotIdentityMatcher.isOpen(bot: bot, heading: conversation.heading, roster: roster) {
+            // In the background Grok Bot redraws only while Accessibility
+            // actions arrive, so an already-open conversation can still show
+            // what it looked like minutes ago. Nudge it and read it again.
+            if let composer = snapshot.element(conversation.composerNodeID) { AXTree.nudge(composer) }
+            try await Task.sleep(nanoseconds: 250_000_000)
+            snapshot = try await windowSnapshot()
+            conversation = TranscriptParser.parse(window: snapshot.root)
+            guard conversation.heading == bot.name else { throw ReplyError.conversationMismatch }
             return (conversation, snapshot)
         }
 
@@ -128,7 +136,7 @@ final class GrokAccessibilityDriver: @unchecked Sendable {
     // MARK: Choices
 
     func pressChoice(_ label: String, for bot: BotIdentity, roster: [BotIdentity]) async throws -> DeliveryReceipt {
-        let (before, snapshot) = try await openConversation(for: bot, roster: roster)
+        let (before, snapshot) = try await waitForQuestion(in: openConversation(for: bot, roster: roster), bot: bot)
         guard let question = before.openQuestion else { throw ReplyError.questionNotFound }
         guard let option = question.options.first(where: { $0.label == label }),
               let element = snapshot.element(option.nodeID)
@@ -140,6 +148,24 @@ final class GrokAccessibilityDriver: @unchecked Sendable {
         return await verify(method: "accessibility-press", keepAwake: snapshot.element(before.composerNodeID)) { after in
             after.heading == bot.name && DeliveryVerifier.choiceDelivered(label, before: before, after: after)
         }
+    }
+
+    /// A question can reach Grok Bot's cache before its window draws it,
+    /// especially in the background. Keep nudging for up to three seconds.
+    private func waitForQuestion(
+        in opened: (ConversationSnapshot, AXSnapshot),
+        bot: BotIdentity
+    ) async throws -> (ConversationSnapshot, AXSnapshot) {
+        var (conversation, snapshot) = opened
+        for _ in 0..<12 where conversation.openQuestion == nil {
+            if let composer = snapshot.element(conversation.composerNodeID) { AXTree.nudge(composer) }
+            try await Task.sleep(nanoseconds: 250_000_000)
+            snapshot = try await windowSnapshot()
+            conversation = TranscriptParser.parse(window: snapshot.root)
+            guard conversation.heading == bot.name else { throw ReplyError.conversationMismatch }
+        }
+        if conversation.openQuestion == nil { log.record(.warning, "ax", "Question for \(bot.id.logTag) not drawn after waiting") }
+        return (conversation, snapshot)
     }
 
     // MARK: Text

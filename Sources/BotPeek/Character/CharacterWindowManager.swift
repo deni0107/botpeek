@@ -453,7 +453,7 @@ final class CharacterWindowManager: StageActions {
     private var panelContentSize: CGSize {
         PanelPlacement.contentSize(
             characterSize: app.settings.characterSize.points,
-            bubbleSize: CGSize(width: SpeechBubble.width, height: 400),
+            bubbleSize: CGSize(width: SpeechBubble.width, height: SpeechBubble.maxHeight),
             edge: app.settings.edge
         )
     }
@@ -647,6 +647,14 @@ final class CharacterWindowManager: StageActions {
         previousApp = nil
         if let target, !target.isTerminated, target.processIdentifier != ProcessInfo.processInfo.processIdentifier {
             _ = target.activate(options: [])
+        }
+        // The app the user was in usually never stopped being active, so
+        // activating it changes nothing and the panel would keep the keyboard.
+        // A non-activating panel gives key status back once it leaves the
+        // screen; bring it straight back.
+        if panel.isKeyWindow, panel.isVisible {
+            panel.orderOut(nil)
+            panel.orderFrontRegardless()
         }
     }
 

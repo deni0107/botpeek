@@ -98,6 +98,9 @@ public struct BotPeekSettings: Codable, Equatable, Sendable {
     public var deliveryMethod: DeliveryMethod = .background
     /// Also read "waiting for you" from Grok Bot's sidebar via Accessibility.
     public var useSidebarSignal = true
+    /// Also show questions bots ask in an ordinary message, not only those
+    /// with answer buttons.
+    public var showsPlainTextQuestions = true
     public var demoMode = false
     public var hasCompletedOnboarding = false
     /// Tuck the speech bubble away after a while without interaction,
@@ -130,7 +133,7 @@ public struct BotPeekSettings: Codable, Equatable, Sendable {
     enum CodingKeys: String, CodingKey {
         case isEnabled, showMenuBarIcon, edge, edgePosition, screen, animationIntensity, characterSize
         case soundsEnabled, reduceMotion, snoozeMinutes, allowInlineApprovals, deliveryMethod
-        case useSidebarSignal, demoMode, hasCompletedOnboarding
+        case useSidebarSignal, showsPlainTextQuestions, demoMode, hasCompletedOnboarding
         case collapsesWhenIdle, nudgesWhenIgnored, globalShortcutEnabled, hideFromScreenCapture, pausedUntil
     }
 
@@ -153,6 +156,7 @@ public struct BotPeekSettings: Codable, Equatable, Sendable {
         allowInlineApprovals = value(.allowInlineApprovals, defaults.allowInlineApprovals)
         deliveryMethod = value(.deliveryMethod, defaults.deliveryMethod)
         useSidebarSignal = value(.useSidebarSignal, defaults.useSidebarSignal)
+        showsPlainTextQuestions = value(.showsPlainTextQuestions, defaults.showsPlainTextQuestions)
         demoMode = value(.demoMode, defaults.demoMode)
         hasCompletedOnboarding = value(.hasCompletedOnboarding, defaults.hasCompletedOnboarding)
         collapsesWhenIdle = value(.collapsesWhenIdle, defaults.collapsesWhenIdle)

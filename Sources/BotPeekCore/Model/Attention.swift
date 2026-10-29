@@ -47,19 +47,23 @@ public struct AttentionContent: Equatable, Hashable, Codable, Sendable {
     /// Set when this request must be answered in Grok Bot itself (for example a
     /// form that asks for a password); the bubble then offers only that.
     public var grokBotOnlyReason: String?
+    /// The user may pick several of `choices` ("choose all that apply").
+    public var allowsMultipleChoices: Bool
 
     public init(
         kind: AttentionKind,
         prompt: String? = nil,
         choices: [AttentionChoice] = [],
         source: ContentSource,
-        grokBotOnlyReason: String? = nil
+        grokBotOnlyReason: String? = nil,
+        allowsMultipleChoices: Bool = false
     ) {
         self.kind = kind
         self.prompt = prompt
         self.choices = choices
         self.source = source
         self.grokBotOnlyReason = grokBotOnlyReason
+        self.allowsMultipleChoices = allowsMultipleChoices
     }
 
     public static let opaque = AttentionContent(kind: .unknown, prompt: nil, choices: [], source: .none)

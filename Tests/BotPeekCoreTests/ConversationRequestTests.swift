@@ -53,16 +53,56 @@ final class ConversationRequestParserTests: XCTestCase {
         XCTAssertNil(open([Entry.widget("t1s0"), Entry.text("t1s1")]), "the bot moved on")
         XCTAssertNil(open([Entry.widget("t1s0"), Entry.human("t2u"), Entry.text("t2s0")]))
         XCTAssertNotNil(open([Entry.widget("t1s0"), Entry.fromBot("t2u")]), "messages between bots don't answer it")
-        XCTAssertNil(open([Entry.human("t1u"), Entry.text("t1s0")]), "plain messages never count")
+        XCTAssertNil(open([Entry.human("t1u"), Entry.text("t1s0")]), "plain messages that ask nothing never count")
         XCTAssertNil(open([]))
     }
 
-    func testMultiSelectAsksForATypedAnswer() throws {
+    func testMultiSelectOffersItsOptionsToPickSeveral() throws {
         let widget = #"{"prompt":"Which days work?","options":[{"label":"Mon","value":"mon"},{"label":"Tue","value":"tue"}],"multiSelect":true,"allowCustom":true}"#
+        let request = try XCTUnwrap(open([Entry.widget("t1s0", widget: widget)]))
+        XCTAssertEqual(request.content.kind, .choice)
+        XCTAssertTrue(request.content.allowsMultipleChoices)
+        XCTAssertEqual(request.content.choices.map(\.label), ["Mon", "Tue"])
+        XCTAssertEqual(request.content.prompt, "Which days work?")
+        XCTAssertFalse(request.isPlainText)
+    }
+
+    func testMultiSelectWithApprovalLabelsIsNotAnApproval() throws {
+        let widget = #"{"prompt":"Which steps?","options":[{"label":"Approve"},{"label":"Deny"}],"multiSelect":true}"#
+        XCTAssertEqual(try XCTUnwrap(open([Entry.widget("t1s0", widget: widget)])).content.kind, .choice)
+    }
+
+    func testMultiStepAsksForATypedAnswer() throws {
+        let widget = #"{"prompt":"Plan the trip","options":[{"label":"Mon"},{"label":"Tue"}],"steps":[{"prompt":"Day"},{"prompt":"Time"}]}"#
         let request = try XCTUnwrap(open([Entry.widget("t1s0", widget: widget)]))
         XCTAssertEqual(request.content.kind, .question)
         XCTAssertEqual(request.content.choices, [])
-        XCTAssertEqual(request.content.prompt, "Which days work?\n\n• Mon\n• Tue")
+        XCTAssertEqual(request.content.prompt, "Plan the trip\n\n• Mon\n• Tue")
+    }
+
+    func testPlainTextQuestionIsOpen() throws {
+        let request = try XCTUnwrap(open([Entry.human("t1u"), Entry.text("t1s0", "Got it. What text should the badge show?")]))
+        XCTAssertEqual(request.content.kind, .question)
+        XCTAssertEqual(request.content.prompt, "Got it. What text should the badge show?")
+        XCTAssertTrue(request.isPlainText)
+        XCTAssertEqual(request.postedAt, Date(timeIntervalSince1970: 1_730_000_000.7))
+    }
+
+    func testPlainTextQuestionClosesWhenAnswered() {
+        XCTAssertNil(open([Entry.text("t1s0", "Which city first?"), Entry.human("t2u", "Lisbon")]))
+        XCTAssertNil(open([Entry.text("t1s0", "Which city first?"), Entry.text("t1s1", "Never mind, I picked Lisbon.")]))
+    }
+
+    func testPlainQuestionHeuristics() {
+        XCTAssertTrue(PlainQuestion.isQuestion("Which stores give you receipt surveys?"))
+        XCTAssertTrue(PlainQuestion.isQuestion("Should I book it? 🙂"))
+        XCTAssertTrue(PlainQuestion.isQuestion("Here's the plan.\n\n**Want me to start now?**"))
+        XCTAssertTrue(PlainQuestion.isQuestion("I can't tell which one you meant (\"A\" or \"B\")?"))
+        XCTAssertFalse(PlainQuestion.isQuestion("Your search is saved."))
+        XCTAssertFalse(PlainQuestion.isQuestion("Is it ready? Yes, it's ready."), "only the ending counts")
+        XCTAssertFalse(PlainQuestion.isQuestion("All done. Anything else?"))
+        XCTAssertFalse(PlainQuestion.isQuestion("Done! Is there anything else I can help with?"))
+        XCTAssertFalse(PlainQuestion.isQuestion(""))
     }
 
     func testApprovalLabelsBecomeAnApproval() throws {

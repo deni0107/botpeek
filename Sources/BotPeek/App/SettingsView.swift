@@ -43,6 +43,9 @@ private struct GeneralSettings: View {
                 }
             }
             Section("Requests") {
+                Toggle("Show questions bots ask in plain text", isOn: $app.settings.showsPlainTextQuestions)
+                Text("Not just questions with answer buttons: a message that ends with a question, once the bot has been quiet for a few seconds.")
+                    .font(.caption).foregroundStyle(.secondary)
                 Picker("Snooze for", selection: $app.settings.snoozeMinutes) {
                     ForEach(BotPeekSettings.snoozeChoices, id: \.self) { minutes in
                         Text(minutes < 60 ? "\(minutes) minutes" : "\(minutes / 60) hour\(minutes == 60 ? "" : "s")").tag(minutes)

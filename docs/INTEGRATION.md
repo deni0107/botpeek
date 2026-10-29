@@ -16,14 +16,15 @@ swapped for an official API if one appears.
 | Secondary attention signal | Sidebar label "…, Waiting for you" via Accessibility | djui/grokbot | Same |
 | Read question & choices | Accessibility tree of Grok Bot's window | grok-bot-mcp | Same |
 | Answer a multiple-choice question | Press the choice button via Accessibility, nudging until it is sent | grok-bot-mcp | **Verified** in the background with Grok Bot 0.78.1 |
-| Send a text reply | Set "Prompt"'s text via Accessibility, press "Send message" (fallback: focus, paste, Return; restore clipboard) | BotPeek (fallback: grok-bot-mcp) | Text and Send button checked with Grok Bot 0.78.1; **first live send pending** |
-| Approve / deny | Press the exact approve/deny button, after explicit confirmation | BotPeek | Off by default; unverified |
+| Send a text reply | Set "Prompt"'s text via Accessibility, press "Send message" (fallback: focus, paste, Return; restore clipboard) | BotPeek (fallback: grok-bot-mcp) | **Verified** in the background with Grok Bot 0.78.1 |
+| Approve / deny | Press the exact approve/deny button, after explicit confirmation | BotPeek | Off by default; **verified** for Approve/Deny answer buttons with Grok Bot 0.78.1 |
 
 > **Verification status:** The parsing and decision logic is covered by automated tests
-> that run in CI on Linux and macOS. On a real Mac with Grok Bot 0.78.1, bot discovery and
-> built-in avatars are verified; **attention detection, question reading, replies and
-> approvals have not been tested end-to-end yet.**
-> See [BETA_TESTING.md](BETA_TESTING.md) to help verify it.
+> that run in CI on Linux and macOS. On a real Mac with Grok Bot 0.78.1, bot discovery,
+> built-in avatars, detecting questions asked with answer buttons, choice and typed
+> replies in the background, and inline approvals of Approve/Deny buttons are verified
+> end-to-end. **Plain-text questions, uploaded avatars and other Grok Bot versions still
+> need testers.** See [BETA_TESTING.md](BETA_TESTING.md) to help verify them.
 
 ## Local data (read-only)
 
@@ -63,8 +64,15 @@ Location: `~/Library/Application Support/Grok Bot/`
   entries are open while their `status` is pending; `user-form` entries until they
   get a `formResolution`. Approvals and forms are answered in Grok Bot only, so
   passwords and codes never pass through BotPeek. Single-choice questions show
-  their options as buttons; multi-select and multi-step ones list the options and
-  take a typed answer. Message text stays in memory and is never written anywhere.
+  their options as buttons; multi-select ones as checkboxes, sent together as one
+  typed reply ("Mon, Tue"); multi-step ones list the options and take a typed answer.
+
+  Bots also ask in ordinary messages (`"message": { "type": "text", "content": "…" }`),
+  which Grok Bot doesn't mark as waiting. BotPeek treats such a message as a
+  question when it is the latest turn, its last sentence ends in "?" and it isn't a
+  sign-off ("Anything else?"), and only after the bot has been quiet for 8 seconds,
+  so a bot that keeps talking doesn't pop up. Settings → General can turn this off.
+  Message text stays in memory and is never written anywhere.
 - `roster-avatars/<key>` — uploaded profile images.
 - `desktop-status.json` — `{ "pid", "signedIn", "appVersion" }` written by the
   running app. BotPeek trusts it only if that process is alive.

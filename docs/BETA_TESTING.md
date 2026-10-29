@@ -1,9 +1,9 @@
 # Beta testing BotPeek
 
-BotPeek's bot discovery, avatars, question detection and multiple-choice answers have
-been checked on one Mac (macOS 26, Grok Bot 0.78.1). The rest — typed replies,
-approvals, animations, and other macOS and Grok Bot versions — **needs volunteers to
-verify it**. Thank you for helping!
+BotPeek's bot discovery, avatars, question detection, answers (choices, multi-select and
+typed replies) and inline approvals have been checked on one Mac (macOS 26, Grok Bot
+0.78.1). Plain-text questions, animations, and other macOS and Grok Bot versions **need
+volunteers to verify them**. Thank you for helping!
 
 You need: a Mac with macOS 14 (Sonoma) or newer, and ideally the Grok Bot desktop
 app signed in with at least one bot. Without Grok Bot you can still test the UI in
@@ -44,7 +44,8 @@ Mark each item ✅ / ❌ / ➖ (not tested) in your report.
 - [ ] Avatars match Grok Bot: built-in shapes and colors, uploaded photos, transparent images.
       **Please attach a screenshot comparing both** — the built-in shapes are BotPeek's own
       drawings and we need your help to make them match.
-- [ ] Ask a bot something that makes it ask you a question. Does the character appear?
+- [ ] Ask a bot something that makes it ask you a question, both with answer buttons and
+      in a plain message ("ask me in plain text…"). Does the character appear?
       How long after Grok Bot shows it?
 - [ ] Ordinary progress, finished tasks and unread messages do **not** trigger a character.
 - [ ] Grant Accessibility (Settings → Connection → Grant Access). Does the bubble show the
