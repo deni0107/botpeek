@@ -96,8 +96,30 @@ public struct BotPeekSettings: Codable, Equatable, Sendable {
     public var useSidebarSignal = true
     public var demoMode = false
     public var hasCompletedOnboarding = false
+    /// Tuck the speech bubble away after a while without interaction,
+    /// leaving just the character.
+    public var collapsesWhenIdle = true
+    /// Wiggle now and then while a request stays unanswered.
+    public var nudgesWhenIgnored = true
+    /// Control-Option-B opens or closes the current request from anywhere.
+    public var globalShortcutEnabled = true
+    /// Keep characters out of screenshots, recordings and screen sharing
+    /// where macOS allows it.
+    public var hideFromScreenCapture = true
+    /// Characters stay hidden until this date (the menu bar still counts).
+    public var pausedUntil: Date?
 
     public init() {}
+
+    public func isPaused(at date: Date) -> Bool {
+        pausedUntil.map { date < $0 } ?? false
+    }
+
+    /// Seconds without interaction before the bubble tucks away.
+    public static let idleCollapseDelay: TimeInterval = 30
+    /// Seconds between reminder wiggles, and how many at most per request.
+    public static let nudgeInterval: TimeInterval = 180
+    public static let maxNudges = 5
 
     public static let snoozeChoices = [5, 15, 30, 60, 120]
 
@@ -105,6 +127,7 @@ public struct BotPeekSettings: Codable, Equatable, Sendable {
         case isEnabled, showMenuBarIcon, edge, edgePosition, screen, animationIntensity, characterSize
         case soundsEnabled, reduceMotion, snoozeMinutes, allowInlineApprovals, deliveryMethod
         case useSidebarSignal, demoMode, hasCompletedOnboarding
+        case collapsesWhenIdle, nudgesWhenIgnored, globalShortcutEnabled, hideFromScreenCapture, pausedUntil
     }
 
     public init(from decoder: Decoder) throws {
@@ -128,6 +151,11 @@ public struct BotPeekSettings: Codable, Equatable, Sendable {
         useSidebarSignal = value(.useSidebarSignal, defaults.useSidebarSignal)
         demoMode = value(.demoMode, defaults.demoMode)
         hasCompletedOnboarding = value(.hasCompletedOnboarding, defaults.hasCompletedOnboarding)
+        collapsesWhenIdle = value(.collapsesWhenIdle, defaults.collapsesWhenIdle)
+        nudgesWhenIgnored = value(.nudgesWhenIgnored, defaults.nudgesWhenIgnored)
+        globalShortcutEnabled = value(.globalShortcutEnabled, defaults.globalShortcutEnabled)
+        hideFromScreenCapture = value(.hideFromScreenCapture, defaults.hideFromScreenCapture)
+        pausedUntil = try? container.decodeIfPresent(Date.self, forKey: .pausedUntil)
     }
 }
 

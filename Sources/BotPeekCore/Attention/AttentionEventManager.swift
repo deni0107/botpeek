@@ -20,6 +20,10 @@ public struct AttentionRequest: Identifiable, Equatable, Sendable {
     public var source: AttentionSource
     public var firstSeen: Date
     public var lastSeen: Date
+    /// When this request last arrived for the user: first appearance, a new
+    /// question from the same bot, or a snooze running out. The queue shows
+    /// the most recent arrival first.
+    public var queuedAt: Date
     public var status: Status
 
     public var botID: BotID { bot.id }
@@ -91,7 +95,8 @@ public final class AttentionEventManager {
         self.dismissedStore = dismissedStore
     }
 
-    public var presentable: [AttentionRequest] { requests.filter(\.isPresentable) }
+    /// Requests to show, newest arrival first.
+    public var presentable: [AttentionRequest] { RequestQueue.ordered(requests.filter(\.isPresentable)) }
 
     public func request(_ id: RequestID) -> AttentionRequest? {
         requests.first { $0.id == id }
@@ -152,6 +157,7 @@ public final class AttentionEventManager {
                         source: observation.source,
                         firstSeen: request.firstSeen,
                         lastSeen: now,
+                        queuedAt: now,
                         status: request.status == .dismissed && observation.source != .roster ? .dismissed : .pending
                     )
                     requests[index] = replacement
@@ -185,6 +191,7 @@ public final class AttentionEventManager {
                     source: observation.source,
                     firstSeen: now,
                     lastSeen: now,
+                    queuedAt: now,
                     status: .pending
                 )
             }
@@ -192,6 +199,7 @@ public final class AttentionEventManager {
             confirmed.lastSeen = now
             confirmed.bot = observation.bot
             confirmed.content = observation.content
+            confirmed.queuedAt = now
             let age = now.timeIntervalSince(confirmed.firstSeen)
             if !inGrace, age >= configuration.confirmationDelay {
                 candidates[botID] = nil
@@ -235,6 +243,7 @@ public final class AttentionEventManager {
         for index in requests.indices {
             if case .snoozed(let until) = requests[index].status, until <= now {
                 requests[index].status = .pending
+                requests[index].queuedAt = now
                 events.append(.updated(requests[index]))
             }
         }
@@ -265,7 +274,11 @@ public final class AttentionEventManager {
     public func restore(_ id: RequestID) -> AttentionRequest? {
         guard let request = request(id) else { return nil }
         switch request.status {
-        case .snoozed, .dismissed: return setStatus(.pending, for: id)
+        case .snoozed, .dismissed:
+            guard let index = requests.firstIndex(where: { $0.id == id }) else { return nil }
+            requests[index].status = .pending
+            requests[index].queuedAt = Date()
+            return requests[index]
         default: return request
         }
     }
@@ -311,6 +324,14 @@ public final class AttentionEventManager {
 
 /// Navigation through the presentable queue.
 public enum RequestQueue {
+    /// Newest arrival first. Requests that arrived in the same read keep the
+    /// reverse of their snapshot order, so the last one reported leads.
+    public static func ordered(_ requests: [AttentionRequest]) -> [AttentionRequest] {
+        requests.enumerated()
+            .sorted { $0.element.queuedAt != $1.element.queuedAt ? $0.element.queuedAt > $1.element.queuedAt : $0.offset > $1.offset }
+            .map(\.element)
+    }
+
     public static func current(in presentable: [AttentionRequest], preferred: RequestID?) -> AttentionRequest? {
         if let preferred, let match = presentable.first(where: { $0.id == preferred }) { return match }
         return presentable.first
@@ -331,5 +352,22 @@ public enum RequestQueue {
         guard !presentable.isEmpty else { return nil }
         guard let index = presentable.firstIndex(where: { $0.id == id }) else { return presentable.first?.id }
         return presentable[(index - 1 + presentable.count) % presentable.count].id
+    }
+}
+
+/// Short, human wording for how long a bot has been waiting.
+public enum WaitTime {
+    public static func describe(since start: Date, now: Date) -> String {
+        let minutes = max(0, Int(now.timeIntervalSince(start) / 60))
+        switch minutes {
+        case 0: return "just now"
+        case 1..<60: return "\(minutes) min"
+        case 60..<(24 * 60):
+            let hours = minutes / 60, rest = minutes % 60
+            return rest == 0 ? "\(hours) h" : "\(hours) h \(rest) min"
+        default:
+            let days = minutes / (24 * 60)
+            return days == 1 ? "1 day" : "\(days) days"
+        }
     }
 }

@@ -180,18 +180,45 @@ final class AttentionEventManagerTests: XCTestCase {
 final class MultiBotQueueTests: XCTestCase {
     let bots = (1...3).map { identity("b\($0)", "Bot \($0)") }
 
-    func testQueueIsFIFOAndNavigable() {
+    func testQueueIsNewestFirstAndNavigable() {
         let manager = AttentionEventManager(configuration: .init(confirmationDelay: 0))
         for index in bots.indices {
             manager.ingest(snapshot(at: Double(index), bots: bots, attention: bots[...index].map { observation($0, "f-" + $0.id.rawValue) }))
         }
         let queue = manager.presentable
-        XCTAssertEqual(queue.map(\.bot.name), ["Bot 1", "Bot 2", "Bot 3"])
-        XCTAssertEqual(RequestQueue.current(in: queue, preferred: nil)?.bot.name, "Bot 1")
+        XCTAssertEqual(queue.map(\.bot.name), ["Bot 3", "Bot 2", "Bot 1"])
+        XCTAssertEqual(RequestQueue.current(in: queue, preferred: nil)?.bot.name, "Bot 3", "the newest request leads")
         XCTAssertEqual(RequestQueue.next(after: queue[2].id, in: queue), queue[0].id, "wraps around")
         XCTAssertEqual(RequestQueue.previous(before: queue[0].id, in: queue), queue[2].id)
         XCTAssertEqual(RequestQueue.position(of: queue[1].id, in: queue)?.index, 1)
         XCTAssertEqual(RequestQueue.current(in: queue, preferred: queue[1].id)?.bot.name, "Bot 2")
+    }
+
+    func testNewQuestionFromWaitingBotMovesToFront() {
+        let manager = AttentionEventManager(configuration: .init(confirmationDelay: 0))
+        manager.ingest(snapshot(at: 0, bots: bots, attention: [observation(bots[0], "a")]))
+        manager.ingest(snapshot(at: 1, bots: bots, attention: [observation(bots[0], "a"), observation(bots[1], "a")]))
+        XCTAssertEqual(manager.presentable.map(\.bot.name), ["Bot 2", "Bot 1"])
+        manager.ingest(snapshot(at: 2, bots: bots, attention: [observation(bots[0], "b"), observation(bots[1], "a")]))
+        XCTAssertEqual(manager.presentable.map(\.bot.name), ["Bot 1", "Bot 2"], "a new question is a new arrival")
+        XCTAssertEqual(manager.presentable.first?.firstSeen, date(0), "but the bot has been waiting since its first question")
+    }
+
+    func testSnoozeEndingMovesToFront() {
+        let manager = AttentionEventManager(configuration: .init(confirmationDelay: 0))
+        manager.ingest(snapshot(at: 0, bots: bots, attention: [observation(bots[0], "a")]))
+        let first = RequestID(botID: bots[0].id, fingerprint: "a")
+        manager.snooze(first, until: date(10))
+        manager.ingest(snapshot(at: 5, bots: bots, attention: [observation(bots[0], "a"), observation(bots[1], "a")]))
+        XCTAssertEqual(manager.presentable.map(\.bot.name), ["Bot 2"])
+        manager.tick(now: date(11))
+        XCTAssertEqual(manager.presentable.map(\.bot.name), ["Bot 1", "Bot 2"])
+    }
+
+    func testRequestsFromOneReadLeadWithTheLastReported() {
+        let manager = AttentionEventManager(configuration: .init(confirmationDelay: 0))
+        manager.ingest(snapshot(at: 0, bots: bots, attention: bots.map { observation($0, "f") }))
+        XCTAssertEqual(manager.presentable.map(\.bot.name), ["Bot 3", "Bot 2", "Bot 1"])
     }
 
     func testEachRequestKeepsItsOwnIdentity() {
@@ -208,13 +235,24 @@ final class MultiBotQueueTests: XCTestCase {
         let manager = AttentionEventManager(configuration: .init(confirmationDelay: 0))
         manager.ingest(snapshot(at: 0, bots: bots, attention: bots.map { observation($0, "f") }))
         manager.ingest(snapshot(at: 1, bots: bots, attention: [observation(bots[0], "f"), observation(bots[2], "f")]))
-        XCTAssertEqual(manager.presentable.map(\.bot.name), ["Bot 1", "Bot 3"])
+        XCTAssertEqual(manager.presentable.map(\.bot.name), ["Bot 3", "Bot 1"])
     }
 
     func testCurrentFallsBackWhenPreferredIsGone() {
         let manager = AttentionEventManager(configuration: .init(confirmationDelay: 0))
         manager.ingest(snapshot(at: 0, bots: bots, attention: bots.map { observation($0, "f") }))
         let gone = RequestID(botID: BotID("missing"), fingerprint: "x")
-        XCTAssertEqual(RequestQueue.current(in: manager.presentable, preferred: gone)?.bot.name, "Bot 1")
+        XCTAssertEqual(RequestQueue.current(in: manager.presentable, preferred: gone)?.bot.name, "Bot 3")
+    }
+}
+
+final class WaitTimeTests: XCTestCase {
+    func testWording() {
+        XCTAssertEqual(WaitTime.describe(since: date(0), now: date(30)), "just now")
+        XCTAssertEqual(WaitTime.describe(since: date(0), now: date(5 * 60 + 10)), "5 min")
+        XCTAssertEqual(WaitTime.describe(since: date(0), now: date(2 * 3_600)), "2 h")
+        XCTAssertEqual(WaitTime.describe(since: date(0), now: date(3_600 + 7 * 60)), "1 h 7 min")
+        XCTAssertEqual(WaitTime.describe(since: date(0), now: date(26 * 3_600)), "1 day")
+        XCTAssertEqual(WaitTime.describe(since: date(10), now: date(0)), "just now", "clock skew never goes negative")
     }
 }

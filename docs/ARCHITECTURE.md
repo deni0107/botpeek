@@ -60,8 +60,11 @@ Grok Bot sidebar (AX) ┴─> AttentionDetector ┘        (confirm, dedupe, que
   real question.
 - **Deduplication by fingerprint** of the request's identity and readable content (not
   timestamps). Dismissed fingerprints are remembered as hashes across restarts.
-- **One character at a time.** Switching between bots exits and re-enters; a new
-  question from the same bot swaps the bubble in place.
+- **One active character, newest first.** The most recent arrival (a new request, a
+  new question, or a snooze ending) becomes the active character; switching between
+  bots exits and re-enters, and a new question from the same bot swaps the bubble in
+  place. Other waiting bots are a small stack along the edge. While the user is
+  writing a reply, arrivals wait in the stack and take over when the reply closes.
 - **The panel never activates BotPeek.** It's a non-activating `NSPanel` at floating
   level on all Spaces; it becomes key only while typing, then focus is handed back.
 - **Click-through**: SwiftUI reports the character and bubble frames; the panel

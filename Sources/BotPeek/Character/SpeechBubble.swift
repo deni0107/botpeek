@@ -7,13 +7,16 @@ struct SpeechBubble: View {
     static let width: CGFloat = 312
 
     var body: some View {
-        let shape = BubbleShape(tail: model.bubbleTail)
+        let shape = BubbleShape(tail: model.bubbleTail, tailNearTop: model.growsDown)
         VStack(alignment: .leading, spacing: 10) {
             BubbleHeader(model: model)
             if let request = model.request {
                 PromptText(text: request.content.displayPrompt, isExpanded: model.isExpanded)
+                    .id(request.id)
                 if model.isExpanded {
+                    // A fresh reply area per request: a draft never carries over to another bot.
                     ReplyArea(model: model, request: request)
+                        .id(request.id)
                         .transition(.opacity)
                 } else {
                     Text(collapsedHint(for: request))
@@ -25,6 +28,9 @@ struct SpeechBubble: View {
                     BubbleFooter(model: model)
                 }
             }
+        }
+        .background {
+            if model.isExpanded { BubbleShortcuts(model: model) }
         }
         .padding(.horizontal, 15)
         .padding(.vertical, 13)
@@ -40,10 +46,13 @@ struct SpeechBubble: View {
         .onTapGesture {
             if !model.isExpanded { model.actions?.expand() }
         }
+        .onHover { model.isHoveringBubble = $0 }
         .interactiveRegion()
         .animation(model.reduceMotion ? nil : .spring(response: 0.32, dampingFraction: 0.86), value: model.isExpanded)
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Request from \(model.botName)")
+        .accessibilityAction(named: "Snooze for \(model.snoozeMinutes) minutes") { model.actions?.snooze() }
+        .accessibilityAction(named: "Dismiss") { model.actions?.dismiss() }
     }
 
     private var edgeInsetsForTail: EdgeInsets {
@@ -56,11 +65,13 @@ struct SpeechBubble: View {
     }
 
     private func collapsedHint(for request: AttentionRequest) -> String {
+        let hint: String
         switch request.content.kind {
-        case .choice: return "Click to choose an answer"
-        case .approval: return "Click to review"
-        default: return "Click to reply"
+        case .choice: hint = "Click to choose an answer"
+        case .approval: hint = "Click to review"
+        default: hint = "Click to reply"
         }
+        return model.shortcutHint.map { "\(hint) or press \($0)" } ?? hint
     }
 }
 
@@ -72,6 +83,16 @@ private struct BubbleHeader: View {
             Text(model.botName)
                 .font(.system(.headline, design: .rounded))
                 .lineLimit(1)
+            if let since = model.request?.firstSeen {
+                TimelineView(.periodic(from: .now, by: 30)) { context in
+                    Text(WaitTime.describe(since: since, now: context.date))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .fixedSize()
+                        .accessibilityLabel("Waiting \(WaitTime.describe(since: since, now: context.date))")
+                }
+            }
             if model.isDemo {
                 Text("DEMO")
                     .font(.system(size: 9, weight: .heavy, design: .rounded))
@@ -85,15 +106,32 @@ private struct BubbleHeader: View {
             if let queue = model.queue, queue.count > 1 {
                 HStack(spacing: 2) {
                     Button { model.actions?.showPrevious() } label: { Image(systemName: "chevron.left") }
+                        .help("Newer request (⌘[)")
                         .accessibilityLabel("Previous request")
                     Text("\(queue.index + 1) of \(queue.count)")
                         .font(.caption.monospacedDigit())
                         .foregroundStyle(.secondary)
                     Button { model.actions?.showNext() } label: { Image(systemName: "chevron.right") }
+                        .help("Older request (⌘])")
                         .accessibilityLabel("Next request")
                 }
                 .buttonStyle(.borderless)
                 .controlSize(.small)
+            }
+            if !model.isExpanded && model.isHoveringBubble {
+                // Quick actions without opening the reply.
+                HStack(spacing: 2) {
+                    Button { model.actions?.snooze() } label: { Image(systemName: "moon.zzz") }
+                        .help("Snooze for \(model.snoozeMinutes) minutes")
+                        .accessibilityLabel("Snooze")
+                    Button { model.actions?.dismiss() } label: { Image(systemName: "xmark") }
+                        .help("Dismiss (stays in the menu bar)")
+                        .accessibilityLabel("Dismiss")
+                }
+                .buttonStyle(.borderless)
+                .controlSize(.small)
+                .foregroundStyle(.secondary)
+                .transition(.opacity)
             }
             if model.isExpanded {
                 Button { model.actions?.collapse() } label: {
@@ -194,6 +232,7 @@ private struct ChoiceList: View {
                 }
                 .buttonStyle(.plain)
                 .disabled(model.delivery == .sending)
+                .modifier(NumberKeyShortcut(index: index, isEnabled: !showsComposer))
                 .accessibilityLabel("Answer \(choice.label)")
             }
             if showsComposer {
@@ -398,10 +437,11 @@ private struct BubbleFooter: View {
             }
             .buttonStyle(.borderless)
             .font(.caption)
+            .help("Open in Grok Bot (⌘O)")
             Spacer()
             Menu {
-                Button("Snooze for \(model.snoozeMinutes) minutes") { model.actions?.snooze() }
-                Button("Dismiss (keep in menu bar)") { model.actions?.dismiss() }
+                Button("Snooze for \(model.snoozeMinutes) minutes (⌘L)") { model.actions?.snooze() }
+                Button("Dismiss, keep in menu bar (⌘D)") { model.actions?.dismiss() }
             } label: {
                 Text("Later")
             }
@@ -411,6 +451,49 @@ private struct BubbleFooter: View {
             .font(.caption)
         }
         .foregroundStyle(.secondary)
+    }
+}
+#endif
+
+#if canImport(AppKit)
+/// Number keys 1–9 pick the matching answer while the reply is open. Off
+/// while typing a different answer, so digits go into the text field.
+private struct NumberKeyShortcut: ViewModifier {
+    let index: Int
+    let isEnabled: Bool
+
+    func body(content: Content) -> some View {
+        if isEnabled, index < 9 {
+            content.keyboardShortcut(KeyEquivalent(Character(String(index + 1))), modifiers: [])
+        } else {
+            content
+        }
+    }
+}
+
+/// Keyboard shortcuts while the reply is open: ⌘[ / ⌘] switch requests,
+/// ⌘L snoozes, ⌘D dismisses, ⌘O opens Grok Bot. Esc closes (on the close button).
+private struct BubbleShortcuts: View {
+    @ObservedObject var model: StageModel
+
+    var body: some View {
+        ZStack {
+            Button("Newer request") { model.actions?.showPrevious() }
+                .keyboardShortcut("[", modifiers: .command)
+            Button("Older request") { model.actions?.showNext() }
+                .keyboardShortcut("]", modifiers: .command)
+            Button("Snooze") { model.actions?.snooze() }
+                .keyboardShortcut("l", modifiers: .command)
+            Button("Dismiss") { model.actions?.dismiss() }
+                .keyboardShortcut("d", modifiers: .command)
+            Button("Open in Grok Bot") { model.actions?.openInGrokBot() }
+                .keyboardShortcut("o", modifiers: .command)
+        }
+        .buttonStyle(.plain)
+        .opacity(0)
+        .frame(width: 0, height: 0)
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
     }
 }
 #endif

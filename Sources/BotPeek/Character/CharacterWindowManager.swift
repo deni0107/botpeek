@@ -63,9 +63,20 @@ final class CharacterWindowManager: StageActions {
     private var cancellables = Set<AnyCancellable>()
     private var plan = AnimationPlan.make(intensity: .lively, reduceMotion: false)
     private var bubbleTask: Task<Void, Never>?
+    private var idleTask: Task<Void, Never>?
+    private var nudgeTask: Task<Void, Never>?
+    private var hopTask: Task<Void, Never>?
+    private var isHopping = false
     private var lastShowToken = 0
     /// The app that was frontmost before the user started typing in the bubble.
     private var previousApp: NSRunningApplication?
+    /// Where the panel is: the display's full and visible frames.
+    private var screenFrame: CGRect?
+    private var visibleFrame: CGRect?
+    /// Pointer and drag anchor when a drag along the edge began, and where it is now.
+    private var dragStart: (mouse: CGPoint, anchor: CGFloat)?
+    private var dragPosition: Double?
+    private lazy var hotKey = GlobalHotKey { [weak self] in self?.hotKeyPressed() }
 
     init(app: AppModel) {
         self.app = app
@@ -75,6 +86,24 @@ final class CharacterWindowManager: StageActions {
         })
         host.sizingOptions = []
         panel.contentView = host
+        tracker.onPointerMoved = { [weak self] in self?.pointerMoved() }
+
+        stage.$isExpanded
+            .removeDuplicates()
+            .sink { [weak self] expanded in
+                MainActor.assumeIsolated {
+                    guard let self else { return }
+                    self.app.setComposing(expanded, request: self.stage.request?.id)
+                }
+            }
+            .store(in: &cancellables)
+        stage.$isHovering
+            .combineLatest(stage.$isHoveringBubble)
+            .removeDuplicates { $0.0 == $1.0 && $0.1 == $1.1 }
+            .sink { [weak self] character, bubble in
+                Task { @MainActor in self?.hoverChanged(character: character, bubble: bubble) }
+            }
+            .store(in: &cancellables)
 
         app.$settings
             .removeDuplicates()
@@ -116,29 +145,36 @@ final class CharacterWindowManager: StageActions {
 
     /// Decides what should be on screen. Called after every model change.
     func sync() {
-        guard app.settings.isEnabled else {
+        guard app.charactersActive else {
+            updateWaiting(from: [], excluding: [])
             if stage.machine.isVisible { leave() }
             return
         }
+        let presentable = app.presentable
         switch stage.phase {
         case .sending, .celebrating:
             // Let the reply finish; then the next request gets its turn.
             if let current = stage.request, let updated = app.request(current.id) { stage.request = updated }
+            updateWaiting(from: presentable, excluding: [stage.request?.id])
             return
         default:
             break
         }
 
-        let presentable = app.presentable
         guard let target = RequestQueue.current(in: presentable, preferred: app.focusedRequestID) else {
+            updateWaiting(from: [], excluding: [])
             if stage.machine.isVisible, stage.phase != .exiting { leave() }
             return
         }
+        updateWaiting(from: presentable, excluding: [stage.request?.id, target.id])
         stage.queue = RequestQueue.position(of: target.id, in: presentable).map { QueuePosition(index: $0.index, count: $0.count) }
 
         switch stage.phase {
-        case .hidden, .exiting:
+        case .hidden:
             enter(with: target)
+        case .exiting:
+            // Let the exit finish (it syncs again), unless the leaving request came back.
+            if stage.request?.id == target.id { enter(with: target) }
         default:
             guard let current = stage.request else { return enter(with: target) }
             if current.id == target.id {
@@ -146,11 +182,26 @@ final class CharacterWindowManager: StageActions {
                 refreshCapabilities()
             } else if current.botID == target.botID || app.focusedRequestID == target.id {
                 // Same bot asking something new, or the user switched requests.
-                swap(to: target)
+                // Switching keeps the reply open, so the keyboard flow continues.
+                swap(to: target, keepExpanded: stage.isExpanded && current.botID != target.botID)
             } else {
                 // A different bot's turn: this one leaves, the next one enters.
                 leave()
             }
+        }
+    }
+
+    /// The other waiting bots, tucked along the edge next to the character.
+    private func updateWaiting(from presentable: [AttentionRequest], excluding ids: [RequestID?]) {
+        let others = presentable.filter { !ids.contains($0.id) }
+        let split = PanelPlacement.stack(others)
+        let waiting = split.shown.map {
+            WaitingBot(id: $0.id, name: $0.bot.name, avatar: app.avatarSource(for: $0.bot), waitingSince: $0.firstSeen)
+        }
+        guard waiting != stage.waiting || split.overflow != stage.waitingOverflow else { return }
+        withAnimation(stage.reduceMotion ? .easeOut(duration: 0.15) : .spring(response: 0.4, dampingFraction: 0.8)) {
+            stage.waiting = waiting
+            stage.waitingOverflow = split.overflow
         }
     }
 
@@ -171,6 +222,7 @@ final class CharacterWindowManager: StageActions {
         load(request)
         stage.isExpanded = false
         stage.bubbleVisible = false
+        stage.isShrunk = false
         stage.machine.handle(.present)
         AnimationCoordinator.set(plan.initial, on: stage)
 
@@ -189,20 +241,32 @@ final class CharacterWindowManager: StageActions {
             withAnimation(self.bubbleAnimation) { self.stage.bubbleVisible = true }
         }
         animator.run(plan.entrance, on: stage) { [weak self] in
-            self?.stage.machine.handle(.animationFinished)
+            guard let self else { return }
+            self.stage.machine.handle(.animationFinished)
+            self.scheduleIdleCollapse()
+            self.scheduleNudges()
         }
     }
 
-    private func swap(to request: AttentionRequest) {
+    private func swap(to request: AttentionRequest, keepExpanded: Bool = false) {
         withAnimation(stage.reduceMotion ? nil : .easeInOut(duration: 0.2)) {
             load(request)
-            stage.isExpanded = false
+            if !keepExpanded { stage.isExpanded = false }
+        }
+        if keepExpanded {
+            expand()
+            scheduleNudges()
+            return
         }
         if stage.phase == .expanded { stage.machine.handle(.collapse) }
+        unshrink()
+        scheduleIdleCollapse()
+        scheduleNudges()
     }
 
     private func leave(then next: (() -> Void)? = nil) {
         bubbleTask?.cancel()
+        cancelReminders()
         guard stage.machine.handle(.leave) || stage.phase == .exiting else {
             next?()
             return
@@ -221,6 +285,7 @@ final class CharacterWindowManager: StageActions {
         tracker.stop()
         stage.request = nil
         stage.isExpanded = false
+        stage.isShrunk = false
         stage.delivery = .idle
         // Whoever is next in the queue may now enter.
         sync()
@@ -228,6 +293,7 @@ final class CharacterWindowManager: StageActions {
 
     private func celebrate() {
         guard stage.machine.handle(.sendSucceeded) else { return }
+        cancelReminders()
         returnFocus()
         let steps = plan.celebration
         animator.run(steps, on: stage) { [weak self] in
@@ -255,6 +321,65 @@ final class CharacterWindowManager: StageActions {
         refreshCapabilities()
     }
 
+    // MARK: Idle collapse and reminders
+
+    /// After a while without interaction the bubble tucks away, leaving the
+    /// character (and the stack) so it stops covering what the user is doing.
+    private func scheduleIdleCollapse() {
+        idleTask?.cancel()
+        guard app.settings.collapsesWhenIdle else { return }
+        idleTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(nanoseconds: UInt64(BotPeekSettings.idleCollapseDelay * 1_000_000_000))
+            guard let self, !Task.isCancelled else { return }
+            self.collapseIfIdle()
+        }
+    }
+
+    private func collapseIfIdle() {
+        guard stage.phase == .presented, !stage.isExpanded, stage.bubbleVisible, stage.delivery == .idle,
+              !stage.isHovering, !stage.isHoveringBubble, dragStart == nil
+        else { return }
+        withAnimation(bubbleAnimation) { stage.bubbleVisible = false }
+        stage.isShrunk = true
+    }
+
+    private func unshrink() {
+        guard stage.isShrunk else { return }
+        stage.isShrunk = false
+        withAnimation(bubbleAnimation) { stage.bubbleVisible = true }
+    }
+
+    private func hoverChanged(character: Bool, bubble: Bool) {
+        if character || bubble {
+            idleTask?.cancel()
+            // Hovering a tucked-away character brings its bubble back.
+            if character, stage.phase == .presented { unshrink() }
+        } else if stage.phase == .presented, !stage.isExpanded {
+            scheduleIdleCollapse()
+        }
+    }
+
+    /// A small wiggle every few minutes while the request stays unanswered.
+    private func scheduleNudges() {
+        nudgeTask?.cancel()
+        guard app.settings.nudgesWhenIgnored, !plan.nudge.isEmpty, let id = stage.request?.id else { return }
+        nudgeTask = Task { @MainActor [weak self] in
+            for _ in 0..<BotPeekSettings.maxNudges {
+                try? await Task.sleep(nanoseconds: UInt64(BotPeekSettings.nudgeInterval * 1_000_000_000))
+                guard let self, !Task.isCancelled, self.stage.request?.id == id else { return }
+                guard self.stage.phase == .presented, !self.stage.isExpanded, !self.isHopping, self.dragStart == nil else { continue }
+                self.animator.run(self.plan.nudge, on: self.stage) {}
+            }
+        }
+    }
+
+    private func cancelReminders() {
+        idleTask?.cancel()
+        nudgeTask?.cancel()
+        hopTask?.cancel()
+        hopTask = nil
+    }
+
     // MARK: Settings and capabilities
 
     private func settingsChanged() {
@@ -263,10 +388,17 @@ final class CharacterWindowManager: StageActions {
         plan = AnimationPlan.make(intensity: settings.animationIntensity, reduceMotion: reduceMotion)
         stage.reduceMotion = reduceMotion
         stage.edge = settings.edge
+        if dragStart == nil { stage.growsDown = PanelPlacement.growsDown(edge: settings.edge, position: settings.edgePosition) }
         stage.characterSize = CGFloat(settings.characterSize.points)
         stage.snoozeMinutes = settings.snoozeMinutes
         stage.isDemo = settings.demoMode
-        if stage.machine.isVisible { positionPanel() }
+        panel.sharingType = settings.hideFromScreenCapture ? .none : .readOnly
+        if settings.globalShortcutEnabled { hotKey.register() } else { hotKey.unregister() }
+        app.globalShortcutRegistered = hotKey.isRegistered
+        stage.shortcutHint = hotKey.isRegistered ? GlobalHotKey.display : nil
+        if !settings.collapsesWhenIdle { idleTask?.cancel(); unshrink() }
+        if !settings.nudgesWhenIgnored { nudgeTask?.cancel() }
+        if stage.machine.isVisible, dragStart == nil { positionPanel() }
         refreshCapabilities()
         sync()
     }
@@ -308,31 +440,100 @@ final class CharacterWindowManager: StageActions {
 
     // MARK: Placement
 
-    private func positionPanel() {
-        let settings = app.settings
-        let screen: NSScreen?
-        switch settings.screen {
+    private func targetScreen() -> NSScreen? {
+        switch app.settings.screen {
         case .followMouse:
             let mouse = NSEvent.mouseLocation
-            screen = NSScreen.screens.first { NSMouseInRect(mouse, $0.frame, false) } ?? NSScreen.main
+            return NSScreen.screens.first { NSMouseInRect(mouse, $0.frame, false) } ?? NSScreen.main
         case .primary:
-            screen = NSScreen.screens.first
+            return NSScreen.screens.first
         }
-        guard let visible = screen?.visibleFrame else { return }
-        let size = PanelPlacement.contentSize(
-            characterSize: settings.characterSize.points,
+    }
+
+    private var panelContentSize: CGSize {
+        PanelPlacement.contentSize(
+            characterSize: app.settings.characterSize.points,
             bubbleSize: CGSize(width: SpeechBubble.width, height: 400),
-            edge: settings.edge
+            edge: app.settings.edge
         )
-        let frame = PanelPlacement.frame(contentSize: size, edge: settings.edge, position: settings.edgePosition, visibleFrame: visible)
-        panel.setFrame(frame, display: true)
+    }
+
+    private func positionPanel() {
+        guard let screen = targetScreen() else { return }
+        screenFrame = screen.frame
+        visibleFrame = screen.visibleFrame
+        place(at: app.settings.edgePosition)
         tracker.update()
+    }
+
+    private func place(at position: Double) {
+        guard let visible = visibleFrame else { return }
+        let settings = app.settings
+        stage.growsDown = PanelPlacement.growsDown(edge: settings.edge, position: position)
+        let frame = PanelPlacement.frame(
+            contentSize: panelContentSize,
+            edge: settings.edge,
+            position: position,
+            visibleFrame: visible,
+            characterSize: CGFloat(settings.characterSize.points)
+        )
+        panel.setFrame(frame, display: true)
+    }
+
+    /// With "Screen with the pointer", the character hops to the display the
+    /// pointer has moved to, once the pointer settles there.
+    private func pointerMoved() {
+        guard app.settings.screen == .followMouse, stage.phase == .presented, !stage.isExpanded,
+              dragStart == nil, !isHopping
+        else { return }
+        guard let screen = targetScreen(), screen.frame != screenFrame else {
+            hopTask?.cancel()
+            hopTask = nil
+            return
+        }
+        guard hopTask == nil else { return }
+        hopTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(nanoseconds: 600_000_000)
+            guard let self, !Task.isCancelled else { return }
+            self.hopTask = nil
+            guard self.stage.phase == .presented, !self.stage.isExpanded, self.targetScreen()?.frame != self.screenFrame else { return }
+            self.hopToPointerScreen()
+        }
+    }
+
+    private func hopToPointerScreen() {
+        isHopping = true
+        let showBubble = !stage.isShrunk
+        withAnimation(bubbleAnimation) { stage.bubbleVisible = false }
+        animator.run(plan.exit, on: stage) { [weak self] in
+            guard let self else { return }
+            guard self.stage.phase == .presented else { self.isHopping = false; return }
+            self.positionPanel()
+            AnimationCoordinator.set(self.plan.initial, on: self.stage)
+            self.animator.run(self.plan.entrance, on: self.stage) { [weak self] in
+                guard let self else { return }
+                self.isHopping = false
+                if showBubble, self.stage.phase == .presented {
+                    withAnimation(self.bubbleAnimation) { self.stage.bubbleVisible = true }
+                }
+            }
+        }
+    }
+
+    // MARK: Global shortcut
+
+    /// Control-Option-B opens the current request, or closes it again.
+    private func hotKeyPressed() {
+        guard stage.request != nil, stage.machine.isVisible, stage.phase != .exiting else { return }
+        if stage.isExpanded { collapse() } else { expand() }
     }
 
     // MARK: StageActions
 
     func expand() {
         guard stage.request != nil else { return }
+        idleTask?.cancel()
+        stage.isShrunk = false
         if stage.phase == .entering || stage.phase == .presented { stage.machine.handle(.expand) }
         if !stage.bubbleVisible { withAnimation(bubbleAnimation) { stage.bubbleVisible = true } }
         stage.isExpanded = true
@@ -348,6 +549,7 @@ final class CharacterWindowManager: StageActions {
         stage.isExpanded = false
         if stage.phase == .expanded { stage.machine.handle(.collapse) }
         returnFocus()
+        scheduleIdleCollapse()
     }
 
     func send(_ reply: Reply) {
@@ -379,6 +581,46 @@ final class CharacterWindowManager: StageActions {
 
     func showPrevious() {
         app.showPrevious()
+    }
+
+    func focus(_ id: RequestID) {
+        app.focus(id)
+    }
+
+    func dragChanged() {
+        let mouse = NSEvent.mouseLocation
+        guard let visible = visibleFrame else { return }
+        let edge = app.settings.edge
+        let characterSize = CGFloat(app.settings.characterSize.points)
+        if dragStart == nil {
+            let anchor = PanelPlacement.dragAnchor(of: panel.frame, edge: edge, growsDown: stage.growsDown, characterSize: characterSize)
+            dragStart = (mouse, anchor)
+            idleTask?.cancel()
+            tracker.isDragging = true
+        }
+        guard let start = dragStart else { return }
+        let delta = edge == .bottom ? mouse.x - start.mouse.x : mouse.y - start.mouse.y
+        let position = PanelPlacement.position(
+            forDragAnchor: start.anchor + delta,
+            edge: edge,
+            contentSize: panelContentSize,
+            visibleFrame: visible,
+            characterSize: characterSize
+        )
+        dragPosition = position
+        // The bubble flips sides as the character crosses the middle.
+        withAnimation(stage.reduceMotion ? nil : .easeInOut(duration: 0.2)) { place(at: position) }
+    }
+
+    func dragEnded() {
+        tracker.isDragging = false
+        let position = dragPosition
+        dragStart = nil
+        dragPosition = nil
+        // Saved like the Settings slider; repositioning lands on the same spot.
+        if let position { app.settings.edgePosition = position }
+        tracker.update()
+        if stage.phase == .presented, !stage.isExpanded { scheduleIdleCollapse() }
     }
 
     func loadQuestion() {
@@ -420,3 +662,4 @@ final class CharacterWindowManager: StageActions {
     }
 }
 #endif
+
