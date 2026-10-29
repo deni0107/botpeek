@@ -32,6 +32,30 @@ final class AttentionEventManagerTests: XCTestCase {
         XCTAssertTrue(manager.requests.isEmpty)
     }
 
+    func testConversationQuestionAppearsOnFirstRead() {
+        let manager = makeManager()
+        let events = manager.ingest(snapshot(at: 0, bots: [research], attention: [observation(research, "f1", source: .conversation)]))
+        XCTAssertEqual(events.count, 1, "a saved conversation question is already settled")
+        XCTAssertNil(manager.nextConfirmationAt)
+    }
+
+    func testReportsWhenPendingSignalWillBeConfirmed() {
+        let manager = makeManager()
+        XCTAssertNil(manager.nextConfirmationAt)
+        manager.ingest(snapshot(at: 10, bots: [research], attention: [observation(research, "f1", source: .accessibility)]))
+        XCTAssertEqual(manager.nextConfirmationAt, date(10.5))
+        manager.ingest(snapshot(at: 10.5, bots: [research], attention: [observation(research, "f1", source: .accessibility)]))
+        XCTAssertNil(manager.nextConfirmationAt)
+        XCTAssertEqual(manager.requests.count, 1)
+    }
+
+    func testWakeGraceStillHoldsConversationQuestions() {
+        let manager = makeManager()
+        manager.systemDidWake(at: date(0))
+        XCTAssertTrue(manager.ingest(snapshot(at: 1, bots: [research], attention: [observation(research, "f1", source: .conversation)])).isEmpty)
+        XCTAssertEqual(manager.ingest(snapshot(at: 9, bots: [research], attention: [observation(research, "f1", source: .conversation)])).count, 1)
+    }
+
     func testDeduplicatesRepeatedSnapshots() {
         let manager = makeManager(delay: 0)
         var appeared = 0

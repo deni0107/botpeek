@@ -77,7 +77,12 @@ final class GrokAccessibilityDriver: @unchecked Sendable {
 
     /// Opens `bot`'s existing conversation by pressing its sidebar button and
     /// confirms the heading matches. Never creates bots or conversations.
-    func openConversation(for bot: BotIdentity, roster: [BotIdentity]) async throws -> (ConversationSnapshot, AXSnapshot) {
+    ///
+    /// `settle` is the least time to let the conversation render after the
+    /// heading changes, for callers that read more than the transcript (the
+    /// message box's draft). It returns sooner otherwise, once the rendered
+    /// messages are the bot's own, and waits at most 400 ms either way.
+    func openConversation(for bot: BotIdentity, roster: [BotIdentity], settle: TimeInterval = 0) async throws -> (ConversationSnapshot, AXSnapshot) {
         var snapshot = try await windowSnapshot()
         var conversation = TranscriptParser.parse(window: snapshot.root)
         log.record(.debug, "ax", "Heading before opening \(bot.id.logTag): \(Self.describe(conversation.heading, bot: bot, roster: roster))")
@@ -86,7 +91,7 @@ final class GrokAccessibilityDriver: @unchecked Sendable {
             // actions arrive, so an already-open conversation can still show
             // what it looked like minutes ago. Nudge it and read it again.
             if let composer = snapshot.element(conversation.composerNodeID) { AXTree.nudge(composer) }
-            try await Task.sleep(nanoseconds: 250_000_000)
+            try await Task.sleep(nanoseconds: 150_000_000)
             snapshot = try await windowSnapshot()
             conversation = TranscriptParser.parse(window: snapshot.root)
             guard conversation.heading == bot.name else { throw ReplyError.conversationMismatch }
@@ -105,24 +110,59 @@ final class GrokAccessibilityDriver: @unchecked Sendable {
         }
         log.record(.info, "ax", "Opened conversation for \(bot.id.logTag)")
 
-        for attempt in 0..<24 {
-            try await Task.sleep(nanoseconds: 250_000_000)
+        let pressedAt = Date()
+        var lastHeading: String?? = .none
+        for _ in 0..<60 {
+            try await Task.sleep(nanoseconds: 100_000_000)
             snapshot = try await windowSnapshot()
             conversation = TranscriptParser.parse(window: snapshot.root)
-            log.record(.debug, "ax", "Heading after \((attempt + 1) * 250) ms: \(Self.describe(conversation.heading, bot: bot, roster: roster))")
+            if lastHeading != .some(conversation.heading) {
+                lastHeading = .some(conversation.heading)
+                log.record(.debug, "ax", "Heading after \(Self.milliseconds(since: pressedAt)) ms: \(Self.describe(conversation.heading, bot: bot, roster: roster))")
+            }
             if conversation.heading == bot.name {
-                // Let the transcript finish rendering.
-                try await Task.sleep(nanoseconds: 400_000_000)
-                snapshot = try await windowSnapshot()
-                conversation = TranscriptParser.parse(window: snapshot.root)
-                guard conversation.heading == bot.name else {
-                    log.record(.warning, "ax", "Heading changed while settling: \(Self.describe(conversation.heading, bot: bot, roster: roster))")
-                    throw ReplyError.conversationMismatch
-                }
-                return (conversation, snapshot)
+                return try await settleConversation(for: bot, roster: roster, minimum: settle, from: (conversation, snapshot))
             }
         }
         throw ReplyError.conversationMismatch
+    }
+
+    /// The heading can change before the transcript below it does, so the
+    /// previous bot's messages (and answer buttons) may still be drawn. Waits
+    /// until the messages shown are this bot's, or for 400 ms when that can't
+    /// be told (a new conversation, or a group).
+    private func settleConversation(
+        for bot: BotIdentity,
+        roster: [BotIdentity],
+        minimum: TimeInterval,
+        from opened: (ConversationSnapshot, AXSnapshot)
+    ) async throws -> (ConversationSnapshot, AXSnapshot) {
+        let start = Date()
+        var (conversation, snapshot) = opened
+        while true {
+            let elapsed = Date().timeIntervalSince(start)
+            if elapsed >= 0.4 || (elapsed >= minimum && Self.showsOwnMessages(conversation, of: bot)) { break }
+            try await Task.sleep(nanoseconds: 50_000_000)
+            snapshot = try await windowSnapshot()
+            conversation = TranscriptParser.parse(window: snapshot.root)
+            guard conversation.heading == bot.name else {
+                log.record(.warning, "ax", "Heading changed while settling: \(Self.describe(conversation.heading, bot: bot, roster: roster))")
+                throw ReplyError.conversationMismatch
+            }
+        }
+        log.record(.debug, "ax", "Conversation settled after \(Self.milliseconds(since: start)) ms")
+        return (conversation, snapshot)
+    }
+
+    /// Whether every rendered message is from `bot` or the user, and at least
+    /// one is from `bot`.
+    static func showsOwnMessages(_ conversation: ConversationSnapshot, of bot: BotIdentity) -> Bool {
+        let senders = Set(conversation.messages.map(\.sender))
+        return senders.contains(bot.name) && senders.isSubset(of: [bot.name, TranscriptParser.defaultUserSender])
+    }
+
+    private static func milliseconds(since date: Date) -> Int {
+        Int(Date().timeIntervalSince(date) * 1_000)
     }
 
     /// Describes a heading for the log without writing bot names.
@@ -157,9 +197,9 @@ final class GrokAccessibilityDriver: @unchecked Sendable {
         bot: BotIdentity
     ) async throws -> (ConversationSnapshot, AXSnapshot) {
         var (conversation, snapshot) = opened
-        for _ in 0..<12 where conversation.openQuestion == nil {
+        for _ in 0..<24 where conversation.openQuestion == nil {
             if let composer = snapshot.element(conversation.composerNodeID) { AXTree.nudge(composer) }
-            try await Task.sleep(nanoseconds: 250_000_000)
+            try await Task.sleep(nanoseconds: 125_000_000)
             snapshot = try await windowSnapshot()
             conversation = TranscriptParser.parse(window: snapshot.root)
             guard conversation.heading == bot.name else { throw ReplyError.conversationMismatch }
@@ -176,7 +216,9 @@ final class GrokAccessibilityDriver: @unchecked Sendable {
     }
 
     func sendText(_ text: String, to bot: BotIdentity, roster: [BotIdentity], method: DeliveryMethod) async throws -> DeliveryReceipt {
-        let (before, snapshot) = try await openConversation(for: bot, roster: roster)
+        // Give the message box time to show this conversation's draft, so the
+        // check below sees it.
+        let (before, snapshot) = try await openConversation(for: bot, roster: roster, settle: 0.25)
         guard let composer = snapshot.element(before.composerNodeID) else { throw ReplyError.composerNotFound }
 
         // Never overwrite something the user was typing in Grok Bot.
@@ -199,8 +241,8 @@ final class GrokAccessibilityDriver: @unchecked Sendable {
         // Grok Bot shows its Send button only once the message box has text, so
         // look for it again after the text has landed.
         var send: AXUIElement?
-        for _ in 0..<8 {
-            try await Task.sleep(nanoseconds: 125_000_000)
+        for _ in 0..<20 {
+            try await Task.sleep(nanoseconds: 50_000_000)
             guard Self.normalizedText(AXTree.string(composer, kAXValueAttribute)) == Self.normalizedText(text) else { continue }
             let current = try await windowSnapshot()
             let conversation = TranscriptParser.parse(window: current.root)
@@ -263,26 +305,35 @@ final class GrokAccessibilityDriver: @unchecked Sendable {
 
     // MARK: Verification
 
-    /// Polls the conversation until `check` passes, for up to ~7 seconds.
-    /// Waits until `check` sees the reply in the conversation.
+    /// Polls the conversation until `check` sees the reply in it, for up to
+    /// ~7 seconds.
     ///
     /// In the background, Grok Bot 0.78 shows an answer at once but only sends
     /// it while Accessibility actions keep arriving, so `keepAwake` (the message
-    /// box) is nudged throughout, and for a moment after the reply shows up.
+    /// box) is nudged throughout, and for two more seconds after the reply shows
+    /// up. That tail runs on its own, so "Delivered" isn't held back by it.
     private func verify(method: String, keepAwake: AXUIElement?, _ check: (ConversationSnapshot) -> Bool) async -> DeliveryReceipt {
-        for _ in 0..<28 {
-            try? await Task.sleep(nanoseconds: 250_000_000)
+        let start = Date()
+        for _ in 0..<56 {
+            try? await Task.sleep(nanoseconds: 125_000_000)
             if let keepAwake { AXTree.nudge(keepAwake) }
             if let current = try? await currentConversation(), check(current.0) {
-                for _ in 0..<8 {
-                    try? await Task.sleep(nanoseconds: 250_000_000)
-                    if let keepAwake { AXTree.nudge(keepAwake) }
-                }
+                log.record(.debug, "ax", "Reply showed up after \(Self.milliseconds(since: start)) ms")
+                if let keepAwake { Self.keepAwake(keepAwake, for: 2) }
                 return DeliveryReceipt(verified: true, completedAt: Date(), method: method)
             }
         }
         log.record(.warning, "ax", "Could not verify delivery (\(method))")
         return DeliveryReceipt(verified: false, completedAt: Date(), method: method)
+    }
+
+    private static func keepAwake(_ element: AXUIElement, for seconds: Double) {
+        Task.detached(priority: .utility) {
+            for _ in 0..<Int(seconds * 4) {
+                try? await Task.sleep(nanoseconds: 250_000_000)
+                AXTree.nudge(element)
+            }
+        }
     }
 
     // MARK: Fallback

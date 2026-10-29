@@ -5,6 +5,7 @@
 First public beta. Bot discovery, avatars, question detection, answers (choices, multi-select
 and typed replies) and inline approvals are checked on a real Mac with Grok Bot 0.78.1.
 
+- Faster: a question appears about 0.1 s after Grok Bot saves it (was up to 2 s), and a plain-text question right when its quiet period ends. Answers show *Delivered* 0.5–1.1 s after you click (was 3–3.5 s)
 - Shows questions bots ask in plain text, not only those with answer buttons, once the bot has been quiet for a few seconds; sign-offs like "Anything else?" don't count. Settings → General can turn this off
 - Multi-select questions show checkboxes and send the picked options together
 - Answers no longer fail with "Couldn't find the question" when the bot's conversation is already open in a background Grok Bot window

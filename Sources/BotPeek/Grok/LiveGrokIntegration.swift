@@ -31,6 +31,8 @@ final class LiveGrokIntegration: GrokIntegration {
     /// A plain-text question shows only once the bot has been quiet this long,
     /// so a bot that asks and then keeps going doesn't pop up.
     static let plainQuestionSettleTime: TimeInterval = 8
+    /// When the earliest plain-text question still settling may be shown.
+    private(set) var nextPlainQuestionAt: Date?
 
     private lazy var replies = GrokReplyService(integration: self)
     var replyService: ReplyService { replies }
@@ -79,11 +81,17 @@ final class LiveGrokIntegration: GrokIntegration {
             sidebar = nil
         }
         let visible = roster.bots.filter { !$0.isHiddenFromSidebar }.map(\.id)
+        var settlesAt: Date?
         let conversations = conversationStore.openRequests(for: visible, rosterFile: roster.fileURL).filter { _, request in
             guard request.isPlainText else { return true }
             guard showsPlainTextQuestions else { return false }
-            return request.postedAt.map { now.timeIntervalSince($0) >= Self.plainQuestionSettleTime } ?? true
+            guard let postedAt = request.postedAt else { return true }
+            let settled = postedAt.addingTimeInterval(Self.plainQuestionSettleTime)
+            if settled <= now { return true }
+            settlesAt = min(settlesAt ?? settled, settled)
+            return false
         }
+        nextPlainQuestionAt = settlesAt
         return AttentionDetector.snapshot(
             roster: roster.bots,
             conversations: conversations,

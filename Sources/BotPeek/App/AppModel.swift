@@ -42,6 +42,9 @@ final class AppModel: ObservableObject {
     private(set) var integration: GrokIntegration
     private var replies: ReplyCoordinator!
     private var timer: Timer?
+    /// A one-off read at the moment a pending question becomes due, so it
+    /// shows then rather than at the next poll.
+    private var followUpTimer: Timer?
     private var watcher: DirectoryWatcher?
     private var isAsleep = false
     private var lastSnapshotAt = Date.distantPast
@@ -123,11 +126,12 @@ final class AppModel: ObservableObject {
 
     private var pendingFileRefresh = false
     private func fileSystemChanged() {
-        // Coalesce bursts of writes into one read.
+        // Coalesce bursts of writes into one read. Grok Bot replaces files
+        // atomically, so a short pause is enough.
         guard !pendingFileRefresh else { return }
         pendingFileRefresh = true
         Task { @MainActor [weak self] in
-            try? await Task.sleep(nanoseconds: 200_000_000)
+            try? await Task.sleep(nanoseconds: 50_000_000)
             self?.pendingFileRefresh = false
             self?.refresh()
         }
@@ -152,6 +156,22 @@ final class AppModel: ObservableObject {
         if wasRunning != health.grokBotRunning, !settings.demoMode { scheduleTimer() }
 
         apply(events)
+        scheduleFollowUp(now: now)
+    }
+
+    private func scheduleFollowUp(now: Date) {
+        followUpTimer?.invalidate()
+        followUpTimer = nil
+        let plainQuestion = integration.isDemo ? nil : live.nextPlainQuestionAt
+        // A deadline already passed means this read couldn't settle it (an
+        // incomplete read, say); the regular poll tries again.
+        guard let due = [manager.nextConfirmationAt, plainQuestion].compactMap({ $0 }).filter({ $0 > now }).min() else { return }
+        // A little after the deadline, so the read lands on the far side of it.
+        let timer = Timer(timeInterval: due.timeIntervalSince(now) + 0.02, repeats: false) { [weak self] _ in
+            Task { @MainActor in self?.refresh() }
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        followUpTimer = timer
     }
 
     private func apply(_ events: [AttentionEvent]) {

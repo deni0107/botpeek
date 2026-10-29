@@ -201,7 +201,7 @@ public final class AttentionEventManager {
             confirmed.content = observation.content
             confirmed.queuedAt = now
             let age = now.timeIntervalSince(confirmed.firstSeen)
-            if !inGrace, age >= configuration.confirmationDelay {
+            if !inGrace, age >= confirmationDelay(for: observation.source) {
                 candidates[botID] = nil
                 if dismissedStore?.contains(confirmed.id) == true {
                     confirmed.status = .dismissed
@@ -216,6 +216,19 @@ public final class AttentionEventManager {
             candidates = candidates.filter { observed[$0.key] != nil }
         }
         return events
+    }
+
+    /// A question in a cached conversation is already settled: Grok Bot saves
+    /// it a couple of seconds after the bot posts it. Waiting again would only
+    /// delay it, so it appears on the first read. Other signals must persist.
+    private func confirmationDelay(for source: AttentionSource) -> TimeInterval {
+        source == .conversation ? 0 : configuration.confirmationDelay
+    }
+
+    /// When a signal seen but not yet shown will have been confirmed, so the
+    /// caller can read again right then instead of waiting for its next poll.
+    public var nextConfirmationAt: Date? {
+        candidates.values.map { $0.firstSeen.addingTimeInterval(confirmationDelay(for: $0.source)) }.min()
     }
 
     private func rank(_ source: AttentionSource) -> Int {
