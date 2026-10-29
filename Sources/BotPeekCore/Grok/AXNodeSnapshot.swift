@@ -142,6 +142,12 @@ public enum BotIdentityMatcher {
     ///   - bot: the bot to reply to.
     ///   - roster: all bots in the roster, used to detect duplicate names.
     ///   - sidebar: the sidebar buttons currently visible.
+    /// Whether the conversation already open, titled `heading`, is `bot`'s.
+    /// The heading shows only the name, so this holds only when no other bot shares it.
+    public static func isOpen(bot: BotIdentity, heading: String?, roster: [BotIdentity]) -> Bool {
+        heading == bot.name && !roster.contains { $0.name == bot.name && $0.id != bot.id }
+    }
+
     public static func match(bot: BotIdentity, roster: [BotIdentity], sidebar: [SidebarEntry]) -> BotMatch {
         let sameName = roster.filter { $0.name == bot.name }
         if sameName.count > 1 { return .ambiguous }

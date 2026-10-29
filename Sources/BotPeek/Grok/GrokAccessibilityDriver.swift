@@ -80,7 +80,9 @@ final class GrokAccessibilityDriver: @unchecked Sendable {
     func openConversation(for bot: BotIdentity, roster: [BotIdentity]) async throws -> (ConversationSnapshot, AXSnapshot) {
         var snapshot = try await windowSnapshot()
         var conversation = TranscriptParser.parse(window: snapshot.root)
-        if conversation.heading == bot.name { return (conversation, snapshot) }
+        if BotIdentityMatcher.isOpen(bot: bot, heading: conversation.heading, roster: roster) {
+            return (conversation, snapshot)
+        }
 
         guard let entries = SidebarParser.entries(in: snapshot.root) else { throw ReplyError.grokBotWindowUnavailable }
         let entry: SidebarEntry

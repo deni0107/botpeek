@@ -22,10 +22,11 @@ your Mac's screen, tells you what it needs, takes your reply, and hops back out 
 </div>
 
 > [!IMPORTANT]
-> **Beta, and not yet verified on a real Mac.** BotPeek was developed without access
-> to a Mac: it compiles and its logic is tested automatically on GitHub's macOS
-> runners, but the on-screen experience and the live Grok Bot integration have **not**
-> been tested end-to-end yet. If you have a Mac, [please help test it](docs/BETA_TESTING.md).
+> **Beta.** BotPeek has been checked on a real Mac (macOS 26, Grok Bot 0.78.1): it
+> finds your bots, reads their names and avatars, and draws them with Grok Bot's own
+> renderer. Answering questions, sending replies and inline approvals have **not**
+> been verified end-to-end yet, so check the first few replies in Grok Bot.
+> [Please help test it](docs/BETA_TESTING.md).
 
 > [!NOTE]
 > BotPeek is an independent, free, open-source community project. It is **not
@@ -108,8 +109,9 @@ clipboard and returns you to the app you were using. Details and safety rules:
 | Area | State |
 | --- | --- |
 | Roster parsing, attention detection, dedupe, queue, snooze/dismiss, reply routing & validation, animation plans, placement | Implemented, **100+ automated tests** on Linux and macOS CI |
-| Native app: floating characters, bubble, menu bar, settings, onboarding | Implemented, **builds in CI; not yet seen running on a Mac** |
-| Live Grok Bot: discovery, avatars, needs-attention, question reading, replies | Implemented from proven community techniques, **not yet verified end-to-end** |
+| Native app: floating characters, bubble, menu bar, settings, onboarding | Implemented, builds in CI; runs on macOS 26, **more beta testing wanted** |
+| Live Grok Bot: discovery, names, built-in avatars | **Verified** on a real Mac with Grok Bot 0.78.1 |
+| Live Grok Bot: needs-attention, question reading, replies | Implemented from proven community techniques, **not yet verified end-to-end** |
 | Inline approvals | Implemented, off by default, unverified |
 | Signed/notarized releases | Supported by the release workflow once credentials are added; current builds are ad-hoc signed |
 

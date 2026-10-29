@@ -37,6 +37,16 @@ final class BotIdentityMatcherTests: XCTestCase {
         XCTAssertEqual(BotIdentityMatcher.match(bot: a, roster: [a, b], sidebar: sidebar), .ambiguous)
     }
 
+    func testOpenConversationNeedsUniqueName() {
+        let a = identity("a", "Helper")
+        let b = identity("b", "Helper")
+        let c = identity("c", "Writer")
+        XCTAssertTrue(BotIdentityMatcher.isOpen(bot: c, heading: "Writer", roster: [a, b, c]))
+        XCTAssertFalse(BotIdentityMatcher.isOpen(bot: c, heading: "Helper", roster: [a, b, c]))
+        XCTAssertFalse(BotIdentityMatcher.isOpen(bot: c, heading: nil, roster: [a, b, c]))
+        XCTAssertFalse(BotIdentityMatcher.isOpen(bot: a, heading: "Helper", roster: [a, b, c]), "the open Helper may be the other one")
+    }
+
     func testNamesContainingCommas() {
         let short = identity("a", "Ops")
         let long = identity("b", "Ops, Europe")
