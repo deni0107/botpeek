@@ -1,4 +1,7 @@
 import Foundation
+#if canImport(CoreGraphics)
+import CoreGraphics
+#endif
 
 /// Geometry for the character panel. Uses AppKit's coordinate system
 /// (origin at the bottom-left of the screen).
