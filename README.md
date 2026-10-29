@@ -48,8 +48,8 @@ your Mac's screen, tells you what it needs, takes your reply, and hops back out 
   waiting for you: a question, a choice, an approval, a handoff. Progress updates, unread
   messages and finished tasks never pop up. Otherwise your screen stays clear.
 - **Your real bots.** Names and avatars come from Grok Bot's own local data: uploaded
-  photos (transparency kept) and built-in shapes in the bot's color. Change an avatar in
-  Grok Bot and BotPeek follows.
+  photos (transparency kept) and built-in shapes drawn by Grok Bot's own avatar code,
+  read from your installed Grok Bot. Change an avatar in Grok Bot and BotPeek follows.
 - **Answer in place.** Pick an option, type a reply, or open the request in Grok Bot.
   BotPeek shows *Sending…* and says *Delivered* only after it sees the reply land in the
   right conversation.
@@ -105,8 +105,8 @@ clipboard and returns you to the app you were using. Details and safety rules:
 | Inline approvals | Implemented, off by default, unverified |
 | Signed/notarized releases | Supported by the release workflow once credentials are added; current builds are ad-hoc signed |
 
-Known limitations: built-in avatar shapes are BotPeek's own drawings of each named shape
-(uploaded photos are exact); conversation reading assumes Grok Bot's English UI; text replies
+Known limitations: built-in avatars fall back to BotPeek's own drawings when Grok Bot
+isn't installed or an update changes its avatar code; conversation reading assumes Grok Bot's English UI; text replies
 bring Grok Bot forward for about a second; ad-hoc-signed updates need Accessibility re-granted.
 
 ## Browser simulator

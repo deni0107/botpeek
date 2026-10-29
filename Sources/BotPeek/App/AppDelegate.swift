@@ -15,6 +15,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         let model = AppModel()
         self.model = model
+        GrokAvatarRenderer.shared.start(log: model.log)
         characters = CharacterWindowManager(app: model)
         model.onEvents = { [weak self] _ in self?.characters.sync() }
 

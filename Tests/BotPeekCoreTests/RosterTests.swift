@@ -130,7 +130,10 @@ final class AvatarTests: XCTestCase {
     func testShapeAliases() {
         XCTAssertEqual(AvatarShape.resolve("Cloud").shape, .cloud)
         XCTAssertEqual(AvatarShape.resolve("starflower").shape, .star)
-        XCTAssertEqual(AvatarShape.resolve("tablet").shape, .capsule)
+        XCTAssertEqual(AvatarShape.resolve("tablet").shape, .tablet)
+        XCTAssertEqual(AvatarShape.resolve("pumpkin").shape, .pumpkin)
+        XCTAssertEqual(AvatarShape.resolve("blob").shape.grokName, "blob")
+        XCTAssertEqual(AvatarShape.resolve("hex").shape.grokName, "hex")
         XCTAssertEqual(AvatarShape.resolve(nil).shape, .classic)
         XCTAssertTrue(AvatarShape.resolve(nil).recognized)
         let unknown = AvatarShape.resolve("mystery-shape")
@@ -144,6 +147,11 @@ final class AvatarTests: XCTestCase {
         XCTAssertEqual(AvatarColor.resolve(nil), .defaultColor)
         XCTAssertFalse(AvatarColor.resolve("chartreuse-ish").isRecognized)
         XCTAssertEqual(AvatarColor.resolve("#12AB34").hexString, "#12AB34")
+        XCTAssertEqual(AvatarColor.resolve("violet").rgb, 0x9159FE, "Grok Bot's own violet, not a system purple")
+        XCTAssertTrue(AvatarColor.resolve("violet").isRecognized)
+        XCTAssertEqual(AvatarColor.resolve("purple").name, "violet")
+        XCTAssertEqual(AvatarColor.resolve("blue").gradient.from, 0x459FFE)
+        XCTAssertEqual(AvatarColor.resolve("#12AB34").gradient.to, 0x12AB34, "custom colors get a flat fill")
     }
 
     func testPhotoLookupAndFallback() throws {
