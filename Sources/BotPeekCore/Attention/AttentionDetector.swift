@@ -5,15 +5,19 @@ import Foundation
 /// Signals, strongest first:
 /// 1. The roster's `awaitingUserResponse` field is set. This is the field
 ///    Grok Bot itself uses to mark a bot as blocked on the user.
-/// 2. Optionally, the bot's sidebar label says it is waiting for the user
-///    (read through Accessibility). Used only when the roster has no payload,
-///    e.g. while the roster cache has not been rewritten yet.
+/// 2. The bot's cached conversation ends with an unanswered question, approval
+///    or form (`ConversationRequestParser`). Grok Bot 0.78 records questions
+///    asked in chat only here.
+/// 3. Optionally, the bot's sidebar label says it is waiting for the user
+///    (read through Accessibility). Used only when neither of the above has
+///    anything, e.g. while the caches have not been rewritten yet.
 ///
 /// Never a trigger: unread messages, unread counts, working/progress states,
-/// finished tasks, or old transcript text.
+/// finished tasks, or questions the user has already answered or moved past.
 public enum AttentionDetector {
     public static func snapshot(
         roster: [Bot],
+        conversations: [BotID: ConversationRequestParser.OpenRequest] = [:],
         sidebar: [SidebarEntry]?,
         observedAt: Date,
         isComplete: Bool = true
@@ -29,6 +33,15 @@ public enum AttentionDetector {
                     fingerprint: "r:" + AwaitingRequestParser.fingerprint(of: payload),
                     content: AwaitingRequestParser.parse(payload),
                     source: .roster
+                ))
+                continue
+            }
+            if let open = conversations[bot.id] {
+                observations.append(AttentionObservation(
+                    bot: bot.identity,
+                    fingerprint: "c:" + open.fingerprint,
+                    content: open.content,
+                    source: .conversation
                 ))
                 continue
             }

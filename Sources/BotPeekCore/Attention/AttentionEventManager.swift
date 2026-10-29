@@ -115,7 +115,7 @@ public final class AttentionEventManager {
         if let graceUntil, now >= graceUntil { self.graceUntil = nil }
 
         var observed: [BotID: AttentionObservation] = [:]
-        // Roster observations win over Accessibility ones for the same bot.
+        // Observations from Grok Bot's data win over Accessibility ones for the same bot.
         for observation in snapshot.attention where observed[observation.bot.id].map({ rank($0.source) > rank(observation.source) }) ?? true {
             observed[observation.bot.id] = observation
         }
@@ -152,13 +152,13 @@ public final class AttentionEventManager {
                     let replacement = AttentionRequest(
                         id: RequestID(botID: request.botID, fingerprint: observation.fingerprint),
                         bot: observation.bot,
-                        content: observation.content.hasReadableContent || observation.source == .roster
+                        content: observation.content.hasReadableContent || observation.source.isFromGrokBotData
                             ? observation.content : request.content,
                         source: observation.source,
                         firstSeen: request.firstSeen,
                         lastSeen: now,
                         queuedAt: now,
-                        status: request.status == .dismissed && observation.source != .roster ? .dismissed : .pending
+                        status: request.status == .dismissed && !observation.source.isFromGrokBotData ? .dismissed : .pending
                     )
                     requests[index] = replacement
                     events.append(.replaced(old: request.id, new: replacement))
@@ -220,7 +220,7 @@ public final class AttentionEventManager {
 
     private func rank(_ source: AttentionSource) -> Int {
         switch source {
-        case .roster, .demo: return 0
+        case .roster, .conversation, .demo: return 0
         case .accessibility: return 1
         }
     }

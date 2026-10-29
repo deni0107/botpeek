@@ -201,7 +201,7 @@ private struct ConnectionSettings: View {
                 Picker("Reply delivery", selection: $app.settings.deliveryMethod) {
                     ForEach(DeliveryMethod.allCases, id: \.self) { Text($0.title).tag($0) }
                 }
-                Text("“Paste” briefly brings Grok Bot forward, pastes your reply, then restores your clipboard and the app you were using.")
+                Text("Typed replies are sent without showing Grok Bot. If your Grok Bot version ignores them, “Paste” briefly brings it forward, pastes your reply, then restores your clipboard and the app you were using.")
                     .font(.caption).foregroundStyle(.secondary)
             }
         }

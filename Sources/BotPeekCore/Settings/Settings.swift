@@ -59,17 +59,21 @@ public enum CharacterSize: String, Codable, CaseIterable, Sendable {
 }
 
 public enum DeliveryMethod: String, Codable, CaseIterable, Sendable {
-    /// Proven: focus Grok Bot's message box, paste, press Return, restore the
-    /// clipboard and the previously active app.
-    case pasteAndReturn
-    /// Experimental: set the message box value through Accessibility and press
-    /// the send button, without bringing Grok Bot forward.
-    case backgroundExperimental
+    /// Set the message box's text through Accessibility and press Send, without
+    /// bringing Grok Bot forward. Verified with Grok Bot 0.78.1.
+    case background
+    /// Bring Grok Bot forward, paste into the message box, press Return, then
+    /// restore the clipboard and the app the user was in. A fallback for Grok
+    /// Bot versions that ignore Accessibility text.
+    ///
+    /// Stored values from before 0.1.0 (`pasteAndReturn`, `backgroundExperimental`)
+    /// no longer decode, so those settings move to the `background` default.
+    case paste
 
     public var title: String {
         switch self {
-        case .pasteAndReturn: return "Paste into Grok Bot (reliable)"
-        case .backgroundExperimental: return "Background (experimental)"
+        case .background: return "In the background"
+        case .paste: return "Paste into Grok Bot (brings it forward briefly)"
         }
     }
 }
@@ -91,7 +95,7 @@ public struct BotPeekSettings: Codable, Equatable, Sendable {
     public var snoozeMinutes = 15
     /// Approve/deny inline. Off by default; approvals open in Grok Bot.
     public var allowInlineApprovals = false
-    public var deliveryMethod: DeliveryMethod = .pasteAndReturn
+    public var deliveryMethod: DeliveryMethod = .background
     /// Also read "waiting for you" from Grok Bot's sidebar via Accessibility.
     public var useSidebarSignal = true
     public var demoMode = false

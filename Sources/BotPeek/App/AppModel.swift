@@ -359,6 +359,10 @@ final class AppModel: ObservableObject {
         log.record(.info, "app", "Opening Grok Bot\(request.map { " for \($0.id)" } ?? "")")
         let integration = integration
         Task { await integration.openInGrokBot(bot: request?.bot) }
+        // The user is handling it in Grok Bot now (a sign-in form, say), so step
+        // aside: it resolves once Grok Bot records it as done, or the character
+        // comes back after the snooze time if it is still waiting.
+        if let request { snooze(request.id) }
     }
 
     // MARK: Permissions

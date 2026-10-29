@@ -52,8 +52,10 @@ Grok Bot sidebar (AX) ┴─> AttentionDetector ┘        (confirm, dedupe, que
 
 ## Key decisions
 
-- **Attention comes from Grok Bot's own `awaitingUserResponse` flag**, not from text
-  heuristics. Unread counts and "working" labels are never triggers.
+- **Attention comes from Grok Bot's own data**, not from text heuristics: the roster's
+  `awaitingUserResponse` flag, or an unanswered question, approval or form at the end
+  of the bot's cached conversation (`ConversationRequestParser`; Grok Bot 0.78 records
+  chat questions only there). Unread counts and "working" labels are never triggers.
 - **A signal must persist** (0.5 s, i.e. two reads) before a character appears, and
   nothing new appears or disappears for 8 s after wake.
 - **Incomplete reads never resolve requests**, so a missing file mid-write can't hide a

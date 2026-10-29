@@ -112,9 +112,25 @@ enum AXTree {
         return AXSnapshot(root: build(0), elements: elements)
     }
 
+    /// Presses `element`.
+    ///
+    /// While its window is in the background, Grok Bot 0.78 accepts a press but
+    /// only acts on it when the next Accessibility action arrives, so a sidebar
+    /// press would open the previously pressed bot. A `nudge(_:)` after a short
+    /// gap (sent at once it is merged with the press) makes the press take
+    /// effect now. Blocks for that gap, so call it off the main thread.
     @discardableResult
     static func press(_ element: AXUIElement) -> Bool {
-        AXUIElementPerformAction(element, kAXPressAction as CFString) == .success
+        guard AXUIElementPerformAction(element, kAXPressAction as CFString) == .success else { return false }
+        usleep(100_000)
+        nudge(element)
+        return true
+    }
+
+    /// A harmless Accessibility action (scroll into view) that lets Grok Bot's
+    /// backgrounded window process work it has put off.
+    static func nudge(_ element: AXUIElement) {
+        AXUIElementPerformAction(element, "AXScrollToVisible" as CFString)
     }
 
     @discardableResult
@@ -122,8 +138,12 @@ enum AXTree {
         AXUIElementSetAttributeValue(element, kAXFocusedAttribute as CFString, kCFBooleanTrue) == .success
     }
 
+    /// Sets `element`'s text, nudged like `press(_:)` so Grok Bot applies it now.
     static func setValue(_ element: AXUIElement, _ text: String) -> Bool {
-        AXUIElementSetAttributeValue(element, kAXValueAttribute as CFString, text as CFString) == .success
+        guard AXUIElementSetAttributeValue(element, kAXValueAttribute as CFString, text as CFString) == .success else { return false }
+        usleep(100_000)
+        nudge(element)
+        return true
     }
 }
 #endif

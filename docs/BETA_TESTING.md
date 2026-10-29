@@ -1,9 +1,9 @@
 # Beta testing BotPeek
 
-BotPeek's bot discovery and avatars have been checked on one Mac (macOS 26, Grok Bot
-0.78.1). The rest of what only a real Mac can show — the floating characters,
-animations, answering questions, sending replies and approvals, and other macOS and
-Grok Bot versions — **needs volunteers to verify it**. Thank you for helping!
+BotPeek's bot discovery, avatars, question detection and multiple-choice answers have
+been checked on one Mac (macOS 26, Grok Bot 0.78.1). The rest — typed replies,
+approvals, animations, and other macOS and Grok Bot versions — **needs volunteers to
+verify it**. Thank you for helping!
 
 You need: a Mac with macOS 14 (Sonoma) or newer, and ideally the Grok Bot desktop
 app signed in with at least one bot. Without Grok Bot you can still test the UI in

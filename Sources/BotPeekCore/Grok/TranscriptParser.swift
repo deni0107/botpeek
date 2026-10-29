@@ -44,6 +44,8 @@ public enum TranscriptParser {
     /// The sender label Grok Bot uses for the user's own messages.
     public static let defaultUserSender = "You"
     static let dismissQuestionLabel = "Dismiss question"
+    static let customAnswerLabel = "Custom answer"
+    static let messageActionsPrefix = "Message actions"
     static let sendButtonLabels: Set<String> = ["Send", "Send message", "Submit"]
 
     // "<sender> 9:55:21 PM" or "<sender> 21:55:21". `\s` also matches the
@@ -167,6 +169,10 @@ public enum TranscriptParser {
     /// Only questions with a "Dismiss question" button count. Other buttons in
     /// the transcript (copy, retry, links) are never mistaken for answers.
     static func openQuestion(in transcript: AXNodeSnapshot) -> OpenQuestion? {
+        dismissibleQuestion(in: transcript) ?? inlineQuestion(in: transcript)
+    }
+
+    static func dismissibleQuestion(in transcript: AXNodeSnapshot) -> OpenQuestion? {
         var questionGroup: AXNodeSnapshot?
         for (node, parent) in transcript.descendants()
         where node.role == "AXButton" && node.label == dismissQuestionLabel {
@@ -183,6 +189,28 @@ public enum TranscriptParser {
         let message = parseMessage(AXNodeSnapshot(id: group.id, role: group.role, title: nil, children: group.children))
         let prompt = message.text.components(separatedBy: "\n\n").last { !$0.isEmpty }
         return OpenQuestion(prompt: prompt, options: options)
+    }
+
+    /// Grok Bot 0.78 shows a question's options as buttons in a group labelled
+    /// with the question, optionally with a "Custom answer" box, and no dismiss
+    /// button. Only the newest message counts: older unanswered questions stay
+    /// on screen with working buttons, and the bot has moved on from them.
+    static func inlineQuestion(in transcript: AXNodeSnapshot, userSender: String = defaultUserSender) -> OpenQuestion? {
+        guard let newest = messageGroups(in: transcript).last,
+              parseLabel(newest.title ?? "")?.sender != userSender
+        else { return nil }
+        let group = newest.descendants().map(\.node).last { node in
+            let label = node.axDescription ?? ""
+            let buttons = node.children.filter { $0.role == "AXButton" && !$0.label.isEmpty }
+            let hasCustomAnswer = node.first(maxDepth: 2) { $0.role == "AXTextArea" && $0.label == customAnswerLabel } != nil
+            return node.role == "AXGroup" && !label.isEmpty && !label.hasPrefix(messageActionsPrefix)
+                && !buttons.isEmpty && (buttons.count >= 2 || hasCustomAnswer)
+        }
+        guard let group else { return nil }
+        let options = group.children
+            .filter { $0.role == "AXButton" && !$0.label.isEmpty }
+            .map { OpenQuestion.Option(label: $0.label.trimmingCharacters(in: .whitespacesAndNewlines), nodeID: $0.id) }
+        return OpenQuestion(prompt: group.axDescription, options: options)
     }
 
     // MARK: - Content

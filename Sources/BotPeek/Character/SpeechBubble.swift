@@ -181,7 +181,7 @@ private struct ReplyArea: View {
     let request: AttentionRequest
 
     var body: some View {
-        if let reason = model.replyUnavailableReason {
+        if let reason = request.content.grokBotOnlyReason ?? model.replyUnavailableReason {
             ReplyUnavailableView(model: model, reason: reason)
         } else {
             switch request.content.kind {

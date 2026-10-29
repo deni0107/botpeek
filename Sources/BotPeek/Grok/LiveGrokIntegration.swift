@@ -5,6 +5,7 @@ import BotPeekCore
 /// The real integration with the Grok Bot desktop app.
 ///
 /// - Bots, avatars and attention state: read-only from Grok Bot's local roster cache.
+/// - Questions asked in chat: read-only from Grok Bot's cached conversations.
 /// - Optional second attention signal: the sidebar label, via Accessibility.
 /// - Question text, choices and replies: Grok Bot's window, via Accessibility.
 final class LiveGrokIntegration: GrokIntegration {
@@ -12,11 +13,12 @@ final class LiveGrokIntegration: GrokIntegration {
     let paths: GrokBotPaths
     let driver: GrokAccessibilityDriver
     private let rosterStore: RosterStore
+    private let conversationStore: ConversationStore
     private let statusReader: DesktopStatusReader
     private let log: DiagnosticsLog
 
     var useSidebarSignal = true
-    var deliveryMethod: DeliveryMethod = .pasteAndReturn
+    var deliveryMethod: DeliveryMethod = .background
 
     private(set) var lastRoster: RosterSnapshot?
     private(set) var lastRosterError: RosterStoreError?
@@ -32,6 +34,7 @@ final class LiveGrokIntegration: GrokIntegration {
         self.paths = paths
         self.log = log
         rosterStore = RosterStore(paths: paths)
+        conversationStore = ConversationStore(paths: paths)
         statusReader = DesktopStatusReader(paths: paths)
         driver = GrokAccessibilityDriver(log: log)
     }
@@ -70,7 +73,14 @@ final class LiveGrokIntegration: GrokIntegration {
         } else {
             sidebar = nil
         }
-        return AttentionDetector.snapshot(roster: roster.bots, sidebar: sidebarAllowed ? sidebar : nil, observedAt: now)
+        let visible = roster.bots.filter { !$0.isHiddenFromSidebar }.map(\.id)
+        let conversations = conversationStore.openRequests(for: visible, rosterFile: roster.fileURL)
+        return AttentionDetector.snapshot(
+            roster: roster.bots,
+            conversations: conversations,
+            sidebar: sidebarAllowed ? sidebar : nil,
+            observedAt: now
+        )
     }
 
     private func refreshSidebarIfNeeded(now: Date) {

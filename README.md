@@ -23,9 +23,10 @@ your Mac's screen, tells you what it needs, takes your reply, and hops back out 
 
 > [!IMPORTANT]
 > **Beta.** BotPeek has been checked on a real Mac (macOS 26, Grok Bot 0.78.1): it
-> finds your bots, reads their names and avatars, and draws them with Grok Bot's own
-> renderer. Answering questions, sending replies and inline approvals have **not**
-> been verified end-to-end yet, so check the first few replies in Grok Bot.
+> finds your bots, reads their names and avatars, draws them with Grok Bot's own
+> renderer, notices questions they ask you, and answers multiple-choice questions from the
+> bubble without bringing Grok Bot forward. Typed replies and inline approvals have **not**
+> been verified end-to-end yet, so check the first few in Grok Bot.
 > [Please help test it](docs/BETA_TESTING.md).
 
 > [!NOTE]
@@ -45,15 +46,19 @@ your Mac's screen, tells you what it needs, takes your reply, and hops back out 
 
 ## What it does
 
-- **Appears only when needed.** A character shows up only when Grok Bot marks a bot as
-  waiting for you: a question, a choice, an approval, a handoff. Progress updates, unread
-  messages and finished tasks never pop up. Otherwise your screen stays clear.
+- **Appears only when needed.** A character shows up only when a bot is waiting for you:
+  a question or choice it asked in chat, an approval, a form to fill in. Ordinary messages,
+  progress updates, unread counts and finished tasks never pop up, so "send me a test
+  message" won't summon anyone; ask a bot to ask you a multiple-choice question instead.
+  Otherwise your screen stays clear.
 - **Your real bots.** Names and avatars come from Grok Bot's own local data: uploaded
   photos (transparency kept) and built-in shapes drawn by Grok Bot's own avatar code,
   read from your installed Grok Bot. Change an avatar in Grok Bot and BotPeek follows.
 - **Answer in place.** Pick an option, type a reply, or open the request in Grok Bot.
   BotPeek shows *Sending…* and says *Delivered* only after it sees the reply land in the
-  right conversation.
+  right conversation. Sign-in forms and approvals open in Grok Bot; BotPeek then steps
+  aside until Grok Bot marks them done, and reminds you once if they're still waiting
+  after your snooze time.
 - **Careful with approvals.** By default approvals open in Grok Bot. Opt in to approve or
   deny inline with a second, explicit confirmation of exactly which button will be pressed.
 - **Several bots at once.** The newest request always comes first. Other waiting bots
@@ -100,8 +105,9 @@ Each release lists SHA-256 checksums. To verify: `shasum -a 256 BotPeek-*.dmg`.
 | Network | None. BotPeek never connects to the internet. |
 
 Replying uses the same Accessibility interface as VoiceOver: BotPeek presses Grok Bot's
-answer buttons, or briefly brings Grok Bot forward to paste your text, then restores your
-clipboard and returns you to the app you were using. Details and safety rules:
+answer buttons or types your reply into its message box and presses Send, all without
+bringing Grok Bot forward (it does switch Grok Bot's open conversation to that bot in the
+background). Details and safety rules:
 [docs/INTEGRATION.md](docs/INTEGRATION.md).
 
 ## What works today
@@ -111,13 +117,15 @@ clipboard and returns you to the app you were using. Details and safety rules:
 | Roster parsing, attention detection, dedupe, queue, snooze/dismiss, reply routing & validation, animation plans, placement | Implemented, **100+ automated tests** on Linux and macOS CI |
 | Native app: floating characters, bubble, menu bar, settings, onboarding | Implemented, builds in CI; runs on macOS 26, **more beta testing wanted** |
 | Live Grok Bot: discovery, names, built-in avatars | **Verified** on a real Mac with Grok Bot 0.78.1 |
-| Live Grok Bot: needs-attention, question reading, replies | Implemented from proven community techniques, **not yet verified end-to-end** |
+| Live Grok Bot: detecting questions asked in chat | **Verified** on a real Mac with Grok Bot 0.78.1 |
+| Live Grok Bot: answering multiple-choice questions from the bubble, in the background | **Verified** on a real Mac with Grok Bot 0.78.1 |
+| Live Grok Bot: typed replies in the background, approvals and forms (open in Grok Bot) | Implemented, **not yet verified end-to-end** |
 | Inline approvals | Implemented, off by default, unverified |
 | Signed/notarized releases | Supported by the release workflow once credentials are added; current builds are ad-hoc signed |
 
 Known limitations: built-in avatars fall back to BotPeek's own drawings when Grok Bot
-isn't installed or an update changes its avatar code; conversation reading assumes Grok Bot's English UI; text replies
-bring Grok Bot forward for about a second; ad-hoc-signed updates need Accessibility re-granted.
+isn't installed or an update changes its avatar code; conversation reading assumes Grok Bot's English UI; replying switches Grok Bot's
+open conversation in the background; ad-hoc-signed updates need Accessibility re-granted.
 
 ## Browser simulator
 

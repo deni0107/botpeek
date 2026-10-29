@@ -112,6 +112,18 @@ final class AXTreeBuilder {
         return node("AXGroup", title: "\(sender) \(time)", children)
     }
 
+    /// A Grok Bot 0.78 message whose question shows inline answer buttons.
+    func inlineQuestion(_ sender: String, _ time: String, prompt: String, buttons: [String], customAnswer: Bool = true) -> AXNodeSnapshot {
+        var options = buttons.map { button($0) }
+        if customAnswer { options.append(node("AXGroup", [node("AXTextArea", desc: "Custom answer")])) }
+        return node("AXGroup", title: "\(sender) \(time)", [
+            node("AXGroup", [node("AXGroup", desc: "Message actions for \(sender) message at \(time)", [
+                node("AXGroup", [node("AXGroup", [text(prompt)]), node("AXGroup", desc: prompt, options)]),
+            ])]),
+            node("AXGroup", desc: time, [text(time)]),
+        ])
+    }
+
     /// A Grok Bot-like window with a sidebar, heading, transcript and composer.
     func window(sidebar: [String], heading: String?, messages: [AXNodeSnapshot], composer: Bool = true) -> AXNodeSnapshot {
         var main: [AXNodeSnapshot] = []

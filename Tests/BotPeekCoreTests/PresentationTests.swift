@@ -178,7 +178,16 @@ final class SettingsTests: XCTestCase {
         XCTAssertFalse(settings.soundsEnabled, "sounds are off by default")
         XCTAssertFalse(settings.allowInlineApprovals, "approvals open in Grok Bot by default")
         XCTAssertFalse(settings.demoMode)
-        XCTAssertEqual(settings.deliveryMethod, .pasteAndReturn)
+        XCTAssertEqual(settings.deliveryMethod, .background, "replies never bring Grok Bot forward by default")
+    }
+
+    func testOldDeliveryMethodsMoveToBackground() throws {
+        for old in ["pasteAndReturn", "backgroundExperimental"] {
+            let json = #"{"deliveryMethod":"\#(old)"}"#
+            XCTAssertEqual(try JSONDecoder().decode(BotPeekSettings.self, from: Data(json.utf8)).deliveryMethod, .background)
+        }
+        let paste = try JSONDecoder().decode(BotPeekSettings.self, from: Data(#"{"deliveryMethod":"paste"}"#.utf8))
+        XCTAssertEqual(paste.deliveryMethod, .paste)
     }
 
     func testMissingAndInvalidKeysKeepDefaults() throws {

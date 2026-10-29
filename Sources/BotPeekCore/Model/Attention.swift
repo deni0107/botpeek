@@ -30,6 +30,8 @@ public enum ContentSource: String, Codable, Sendable {
     case roster
     /// The conversation transcript, read through Accessibility.
     case transcript
+    /// Grok Bot's cached copy of the conversation, read from disk.
+    case conversation
     /// The demo integration.
     case demo
     /// Nothing readable; BotPeek only knows that the bot is waiting.
@@ -42,12 +44,22 @@ public struct AttentionContent: Equatable, Hashable, Codable, Sendable {
     public var prompt: String?
     public var choices: [AttentionChoice]
     public var source: ContentSource
+    /// Set when this request must be answered in Grok Bot itself (for example a
+    /// form that asks for a password); the bubble then offers only that.
+    public var grokBotOnlyReason: String?
 
-    public init(kind: AttentionKind, prompt: String? = nil, choices: [AttentionChoice] = [], source: ContentSource) {
+    public init(
+        kind: AttentionKind,
+        prompt: String? = nil,
+        choices: [AttentionChoice] = [],
+        source: ContentSource,
+        grokBotOnlyReason: String? = nil
+    ) {
         self.kind = kind
         self.prompt = prompt
         self.choices = choices
         self.source = source
+        self.grokBotOnlyReason = grokBotOnlyReason
     }
 
     public static let opaque = AttentionContent(kind: .unknown, prompt: nil, choices: [], source: .none)
@@ -74,8 +86,13 @@ public struct AttentionContent: Equatable, Hashable, Codable, Sendable {
 /// Which signal reported that a bot needs attention.
 public enum AttentionSource: String, Codable, Sendable {
     case roster
+    /// Grok Bot's cached conversation shows an unanswered question, approval or form.
+    case conversation
     case accessibility
     case demo
+
+    /// Read from Grok Bot's own data, as opposed to inferred from its window.
+    public var isFromGrokBotData: Bool { self == .roster || self == .conversation }
 }
 
 /// A single observation that a bot is blocked on the user.

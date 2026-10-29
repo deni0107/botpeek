@@ -11,11 +11,12 @@ swapped for an official API if one appears.
 | Discover bots, names, ids | Read Grok Bot's roster cache (read-only) | djui/grokbot, grokbot-widget | **Verified** with Grok Bot 0.78.1 |
 | Built-in avatar shape/color | `avatarShape`, `avatarColor` roster fields | djui/grokbot | **Verified** with Grok Bot 0.78.1 |
 | Uploaded avatar | `avatarPhoto.key` → `roster-avatars/<key>` | grokbot-widget | Proven by others; **not yet verified by BotPeek on a real Mac** |
-| Needs-attention signal | `awaitingUserResponse` roster field | djui/grokbot | Same |
+| Needs-attention signal | `awaitingUserResponse` roster field | djui/grokbot | Same; not set by Grok Bot 0.78.1 for questions asked in chat |
+| Open questions, approvals, forms | Latest entry of the bot's cached conversation (read-only) | BotPeek | **Verified** detection with Grok Bot 0.78.1 |
 | Secondary attention signal | Sidebar label "…, Waiting for you" via Accessibility | djui/grokbot | Same |
 | Read question & choices | Accessibility tree of Grok Bot's window | grok-bot-mcp | Same |
-| Answer a multiple-choice question | Press the choice button via Accessibility | grok-bot-mcp | Same |
-| Send a text reply | Focus "Prompt", paste, Return; restore clipboard | grok-bot-mcp | Same |
+| Answer a multiple-choice question | Press the choice button via Accessibility, nudging until it is sent | grok-bot-mcp | **Verified** in the background with Grok Bot 0.78.1 |
+| Send a text reply | Set "Prompt"'s text via Accessibility, press "Send message" (fallback: focus, paste, Return; restore clipboard) | BotPeek (fallback: grok-bot-mcp) | Text and Send button checked with Grok Bot 0.78.1; **first live send pending** |
 | Approve / deny | Press the exact approve/deny button, after explicit confirmation | BotPeek | Off by default; unverified |
 
 > **Verification status:** The parsing and decision logic is covered by automated tests
@@ -44,6 +45,26 @@ Location: `~/Library/Application Support/Grok Bot/`
         "lastActivityAt": 1730000000000, "isHiddenFromSidebar": false } ] } }
   ```
 
+- Conversations: the file whose key is `<account>.transcript.replicas.<bot id>`,
+  for the same account as the roster. BotPeek reads it only to see whether the
+  conversation's latest entry is a request still waiting for you:
+
+  ```json
+  { "schemaVersion": 1, "value": { "entries": [ …,
+    { "kind": "send-message", "id": "t3s0", "timestampMs": 1730000000000,
+      "message": { "type": "widget", "widget": { "prompt": "…",
+        "options": [ { "label": "…", "value": "…" } ],
+        "allowCustom": true, "multiSelect": false } } } ] } }
+  ```
+
+  A question is answered once Grok Bot adds `respondedValue`, `widgetSkipped` or
+  `widgetDismissed` to it, or once anyone moves the conversation on (you write,
+  or the bot posts again; messages between bots don't count). `auto-review-approval`
+  entries are open while their `status` is pending; `user-form` entries until they
+  get a `formResolution`. Approvals and forms are answered in Grok Bot only, so
+  passwords and codes never pass through BotPeek. Single-choice questions show
+  their options as buttons; multi-select and multi-step ones list the options and
+  take a typed answer. Message text stays in memory and is never written anywhere.
 - `roster-avatars/<key>` — uploaded profile images.
 - `desktop-status.json` — `{ "pid", "signedIn", "appVersion" }` written by the
   running app. BotPeek trusts it only if that process is alive.
@@ -72,8 +93,9 @@ why. Verified against Grok Bot 0.78.1. `BotPeek --render-avatars <folder>` write
 every shape and each roster bot's avatar as PNGs for a quick visual check. Avatar keys are validated as 32 hex characters so a malformed
 roster can't point BotPeek at another file.
 
-**Unknowns:** the structure of the `awaitingUserResponse` payload has not been
-published. `AwaitingRequestParser` looks for common fields (`question`, `prompt`,
+**Unknowns:** Grok Bot 0.78.1 leaves `awaitingUserResponse` empty even while a bot
+waits on a question, so BotPeek relies on the conversation cache above. The
+payload's structure, for versions that do set it, has not been published. `AwaitingRequestParser` looks for common fields (`question`, `prompt`,
 `message`, `options`, `choices`, `type`…) and falls back to "the bot is waiting"
 plus reading the question from the conversation. Beta testers' `--check` output
 (which contains no message text) tells us whether payloads are readable.
@@ -92,7 +114,21 @@ Landmarks used (from grok-bot-mcp):
 - Transcript: element described as `Conversation transcript`; each message is a
   group titled `<sender> <h:mm:ss AM>` (sender `You` for the user).
 - Open question: a group containing a `Dismiss question` button; the other
-  buttons in that group are the choices.
+  buttons in that group are the choices. Grok Bot 0.78.1 has no dismiss button:
+  the choices are buttons directly inside a group described with the question
+  text, often next to a `Custom answer` text area. BotPeek reads that form only
+  from the newest message, because older unanswered questions keep working
+  buttons after the bot has moved on.
+- Pressing: while Grok Bot is in the background, 0.78.1 acts on a pressed button
+  only when the next Accessibility action arrives, so a sidebar press would open
+  the previously pressed bot. BotPeek follows every press, 100 ms later, with a
+  harmless `AXScrollToVisible` on the same element to make it take effect. The
+  same goes for the work a press starts: Grok Bot shows an answer at once
+  ("Your answer") but sends it only while Accessibility actions keep arriving,
+  so BotPeek keeps nudging the message box until it sees the reply in the
+  conversation, and for two seconds after. Grok Bot also writes its caches less
+  often in the background, so a new question can take a minute or two to show
+  up while Grok Bot is hidden.
 - Composer: `AXTextArea` described as `Prompt`.
 
 ### Safety rules BotPeek adds
@@ -118,10 +154,12 @@ Landmarks used (from grok-bot-mcp):
 
 - Pressing a choice button works without bringing Grok Bot forward, but it does
   switch Grok Bot's visible conversation to that bot.
-- Text replies briefly bring Grok Bot forward (about a second) to paste, then
-  return to the previous app. An experimental "background" method sets the text
-  through Accessibility and presses Send without activating Grok Bot; it is off by
-  default because it is unverified.
+- Text replies are sent in the background by default: BotPeek sets the message
+  box's text through Accessibility, waits for Grok Bot's `Send message` button
+  (it appears only once there is text), and presses it. If Grok Bot ignores the
+  text, BotPeek clears the box and says so; Settings → Advanced → Reply delivery
+  can switch to pasting, which brings Grok Bot forward for about a second and then
+  returns to the previous app.
 
 ## Options evaluated and not used
 

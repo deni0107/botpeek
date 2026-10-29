@@ -80,6 +80,7 @@ final class GrokAccessibilityDriver: @unchecked Sendable {
     func openConversation(for bot: BotIdentity, roster: [BotIdentity]) async throws -> (ConversationSnapshot, AXSnapshot) {
         var snapshot = try await windowSnapshot()
         var conversation = TranscriptParser.parse(window: snapshot.root)
+        log.record(.debug, "ax", "Heading before opening \(bot.id.logTag): \(Self.describe(conversation.heading, bot: bot, roster: roster))")
         if BotIdentityMatcher.isOpen(bot: bot, heading: conversation.heading, roster: roster) {
             return (conversation, snapshot)
         }
@@ -96,20 +97,32 @@ final class GrokAccessibilityDriver: @unchecked Sendable {
         }
         log.record(.info, "ax", "Opened conversation for \(bot.id.logTag)")
 
-        for _ in 0..<24 {
+        for attempt in 0..<24 {
             try await Task.sleep(nanoseconds: 250_000_000)
             snapshot = try await windowSnapshot()
             conversation = TranscriptParser.parse(window: snapshot.root)
+            log.record(.debug, "ax", "Heading after \((attempt + 1) * 250) ms: \(Self.describe(conversation.heading, bot: bot, roster: roster))")
             if conversation.heading == bot.name {
                 // Let the transcript finish rendering.
                 try await Task.sleep(nanoseconds: 400_000_000)
                 snapshot = try await windowSnapshot()
                 conversation = TranscriptParser.parse(window: snapshot.root)
-                guard conversation.heading == bot.name else { throw ReplyError.conversationMismatch }
+                guard conversation.heading == bot.name else {
+                    log.record(.warning, "ax", "Heading changed while settling: \(Self.describe(conversation.heading, bot: bot, roster: roster))")
+                    throw ReplyError.conversationMismatch
+                }
                 return (conversation, snapshot)
             }
         }
         throw ReplyError.conversationMismatch
+    }
+
+    /// Describes a heading for the log without writing bot names.
+    private static func describe(_ heading: String?, bot: BotIdentity, roster: [BotIdentity]) -> String {
+        guard let heading else { return "none" }
+        if heading == bot.name { return "target" }
+        if let other = roster.first(where: { $0.name == heading }) { return "other bot \(other.id.logTag)" }
+        return "unrecognized (\(heading.count) characters)"
     }
 
     // MARK: Choices
@@ -124,12 +137,17 @@ final class GrokAccessibilityDriver: @unchecked Sendable {
         guard AXTree.press(element) else { throw ReplyError.choiceNotOffered }
         log.record(.info, "ax", "Pressed a choice for \(bot.id.logTag)")
         // From here on, never retry: the press reached Grok Bot.
-        return await verify(method: "accessibility-press") { after in
+        return await verify(method: "accessibility-press", keepAwake: snapshot.element(before.composerNodeID)) { after in
             after.heading == bot.name && DeliveryVerifier.choiceDelivered(label, before: before, after: after)
         }
     }
 
     // MARK: Text
+
+    /// Grok Bot's editor may add a trailing newline to the value it reports.
+    static func normalizedText(_ text: String?) -> String {
+        (text ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+    }
 
     func sendText(_ text: String, to bot: BotIdentity, roster: [BotIdentity], method: DeliveryMethod) async throws -> DeliveryReceipt {
         let (before, snapshot) = try await openConversation(for: bot, roster: roster)
@@ -142,24 +160,41 @@ final class GrokAccessibilityDriver: @unchecked Sendable {
         }
 
         switch method {
-        case .backgroundExperimental:
+        case .background:
             return try await sendInBackground(text, composer: composer, snapshot: snapshot, before: before, bot: bot)
-        case .pasteAndReturn:
+        case .paste:
             return try await sendByPasting(text, composer: composer, before: before, bot: bot)
         }
     }
 
     private func sendInBackground(_ text: String, composer: AXUIElement, snapshot: AXSnapshot, before: ConversationSnapshot, bot: BotIdentity) async throws -> DeliveryReceipt {
-        guard AXTree.setValue(composer, text),
-              AXTree.string(composer, kAXValueAttribute) == text,
-              let send = snapshot.element(before.sendButtonNodeID)
-        else {
-            _ = AXTree.setValue(composer, "")
-            throw ReplyError.other("Background sending isn't supported by this Grok Bot version. Switch Delivery to “Paste into Grok Bot” in Settings.")
+        let unsupported = ReplyError.other("Background sending isn't supported by this Grok Bot version. Switch Reply delivery to “Paste into Grok Bot” in Settings.")
+        guard AXTree.setValue(composer, text) else { throw unsupported }
+        // Grok Bot shows its Send button only once the message box has text, so
+        // look for it again after the text has landed.
+        var send: AXUIElement?
+        for _ in 0..<8 {
+            try await Task.sleep(nanoseconds: 125_000_000)
+            guard Self.normalizedText(AXTree.string(composer, kAXValueAttribute)) == Self.normalizedText(text) else { continue }
+            let current = try await windowSnapshot()
+            let conversation = TranscriptParser.parse(window: current.root)
+            guard conversation.heading == bot.name else {
+                _ = AXTree.setValue(composer, "")
+                throw ReplyError.conversationMismatch
+            }
+            send = current.element(conversation.sendButtonNodeID)
+            if send != nil { break }
         }
-        guard AXTree.press(send) else { throw ReplyError.composerNotFound }
+        guard let send else {
+            _ = AXTree.setValue(composer, "")
+            throw unsupported
+        }
+        guard AXTree.press(send) else {
+            _ = AXTree.setValue(composer, "")
+            throw ReplyError.composerNotFound
+        }
         log.record(.info, "ax", "Sent text in background to \(bot.id.logTag)")
-        return await verify(method: "accessibility-value") { after in
+        return await verify(method: "accessibility-value", keepAwake: composer) { after in
             after.heading == bot.name && DeliveryVerifier.textDelivered(text, before: before, after: after)
         }
     }
@@ -195,7 +230,7 @@ final class GrokAccessibilityDriver: @unchecked Sendable {
             previous?.restore()
         }
 
-        return await verify(method: "paste-and-return") { after in
+        return await verify(method: "paste-and-return", keepAwake: composer) { after in
             after.heading == bot.name && DeliveryVerifier.textDelivered(text, before: before, after: after)
         }
     }
@@ -203,10 +238,20 @@ final class GrokAccessibilityDriver: @unchecked Sendable {
     // MARK: Verification
 
     /// Polls the conversation until `check` passes, for up to ~7 seconds.
-    private func verify(method: String, _ check: (ConversationSnapshot) -> Bool) async -> DeliveryReceipt {
+    /// Waits until `check` sees the reply in the conversation.
+    ///
+    /// In the background, Grok Bot 0.78 shows an answer at once but only sends
+    /// it while Accessibility actions keep arriving, so `keepAwake` (the message
+    /// box) is nudged throughout, and for a moment after the reply shows up.
+    private func verify(method: String, keepAwake: AXUIElement?, _ check: (ConversationSnapshot) -> Bool) async -> DeliveryReceipt {
         for _ in 0..<28 {
             try? await Task.sleep(nanoseconds: 250_000_000)
+            if let keepAwake { AXTree.nudge(keepAwake) }
             if let current = try? await currentConversation(), check(current.0) {
+                for _ in 0..<8 {
+                    try? await Task.sleep(nanoseconds: 250_000_000)
+                    if let keepAwake { AXTree.nudge(keepAwake) }
+                }
                 return DeliveryReceipt(verified: true, completedAt: Date(), method: method)
             }
         }

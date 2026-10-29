@@ -19,6 +19,14 @@ swift test                 # core + app build; works on macOS
 swift run BotPeek          # run the menu bar app from source (macOS)
 ```
 
+macOS ties the Accessibility permission to an ad-hoc-signed app's exact build, so
+every rebuild needs it granted again. Sign with any certificate in your keychain
+(`security find-identity -v -p codesigning`) and the permission survives rebuilds:
+
+```bash
+DEVELOPER_ID_APPLICATION="Apple Development: Your Name (TEAMID)" ./scripts/build-app.sh
+```
+
 Without a Mac you can run the core tests in Docker:
 
 ```bash
@@ -28,7 +36,7 @@ docker run --rm -v "$PWD:/src" -w /src swift:6.0-jammy swift test
 - `BotPeekCore` must stay Foundation-only so it builds on Linux. Put decisions there
   and test them; keep `Sources/BotPeek` (AppKit/SwiftUI) thin.
 - Every Grok Bot-specific assumption belongs in `GrokBotApp`, `RosterParser`,
-  `SidebarParser` or `TranscriptParser`, with a test and a note in docs/INTEGRATION.md.
+  `SidebarParser`, `TranscriptParser` or `ConversationRequestParser`, with a test and a note in docs/INTEGRATION.md.
 - Match the surrounding style: small types, clear names, comments that explain *why*.
 
 ## Ground rules
