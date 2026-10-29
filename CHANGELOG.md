@@ -40,4 +40,4 @@ and typed replies) and inline approvals are checked on a real Mac with Grok Bot 
 - Settings, first-run onboarding, Accessibility diagnostics, privacy-preserving diagnostics export, `--version` and `--check`
 - Demo mode with clearly labelled sample bots
 - Browser-based design simulator
-- CI on Linux and macOS (Apple silicon and Intel); universal DMG/ZIP releases with SHA-256 checksums; optional signing and notarization
+- CI on macOS (Apple silicon and Intel); universal DMG/ZIP releases with SHA-256 checksums; optional signing and notarization

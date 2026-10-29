@@ -20,7 +20,7 @@ swapped for an official API if one appears.
 | Approve / deny | Press the exact approve/deny button, after explicit confirmation | BotPeek | Off by default; **verified** for Approve/Deny answer buttons with Grok Bot 0.78.1 |
 
 > **Verification status:** The parsing and decision logic is covered by automated tests
-> that run in CI on Linux and macOS. On a real Mac with Grok Bot 0.78.1, bot discovery,
+> that run in CI on macOS. On a real Mac with Grok Bot 0.78.1, bot discovery,
 > built-in avatars, detecting questions asked with answer buttons, choice and typed
 > replies in the background, and inline approvals of Approve/Deny buttons are verified
 > end-to-end. **Plain-text questions, uploaded avatars and other Grok Bot versions still

@@ -2,7 +2,7 @@
 
 ```
 Sources/
-  BotPeekCore/            Platform-independent logic (Foundation only). Tested on Linux + macOS.
+  BotPeekCore/            UI-independent logic (Foundation only), covered by the tests.
     Model/                Bot, BotIdentity, AvatarDescriptor, AttentionContent, JSONValue
     Grok/                 GrokBotPaths, RosterParser/Store, AsarArchive, GrokAvatarScript, AwaitingRequestParser,
                           AXNodeSnapshot + SidebarParser + BotIdentityMatcher,

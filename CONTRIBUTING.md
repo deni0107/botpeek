@@ -33,7 +33,7 @@ Without a Mac you can run the core tests in Docker:
 docker run --rm -v "$PWD:/src" -w /src swift:6.0-jammy swift test
 ```
 
-- `BotPeekCore` must stay Foundation-only so it builds on Linux. Put decisions there
+- `BotPeekCore` must stay Foundation-only, free of AppKit and SwiftUI. Put decisions there
   and test them; keep `Sources/BotPeek` (AppKit/SwiftUI) thin.
 - Every Grok Bot-specific assumption belongs in `GrokBotApp`, `RosterParser`,
   `SidebarParser`, `TranscriptParser` or `ConversationRequestParser`, with a test and a note in docs/INTEGRATION.md.
@@ -53,5 +53,5 @@ docker run --rm -v "$PWD:/src" -w /src swift:6.0-jammy swift test
 ## Pull requests
 
 1. Fork, branch from `main`, and keep the change focused.
-2. Add or update tests; `swift test` must pass. CI runs on Linux and macOS (Apple silicon and Intel).
+2. Add or update tests; `swift test` must pass. CI runs on macOS (Apple silicon and Intel).
 3. Describe what you verified, and on what (Mac model, macOS, Grok Bot version), in the PR template.

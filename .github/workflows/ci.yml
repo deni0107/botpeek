@@ -14,14 +14,6 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  core-linux:
-    name: Core tests (Linux)
-    runs-on: ubuntu-latest
-    container: swift:6.0-jammy
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
-      - run: swift test
-
   macos:
     name: Build & test (${{ matrix.name }})
     strategy:

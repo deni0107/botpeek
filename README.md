@@ -115,7 +115,7 @@ background). Details and safety rules:
 
 | Area | State |
 | --- | --- |
-| Roster parsing, attention detection, dedupe, queue, snooze/dismiss, reply routing & validation, animation plans, placement | Implemented, **100+ automated tests** on Linux and macOS CI |
+| Roster parsing, attention detection, dedupe, queue, snooze/dismiss, reply routing & validation, animation plans, placement | Implemented, **100+ automated tests** on macOS CI (Apple silicon and Intel) |
 | Native app: floating characters, bubble, menu bar, settings, onboarding | Implemented, builds in CI; runs on macOS 26, **more beta testing wanted** |
 | Live Grok Bot: discovery, names, built-in avatars | **Verified** on a real Mac with Grok Bot 0.78.1 |
 | Live Grok Bot: detecting questions asked in chat (answer buttons) | **Verified** on a real Mac with Grok Bot 0.78.1 |
@@ -152,9 +152,7 @@ swift run BotPeek               # run from the terminal (menu bar app)
 ./scripts/package.sh            # DMG + ZIP + SHA256SUMS.txt
 ```
 
-No Mac? The platform-independent core also builds and tests on Linux
-(`swift test` in the `swift:6.0` Docker image), and every push builds and tests the full
-app on GitHub's macOS runners. Command-line checks for testers:
+Every push builds and tests the full app on GitHub's macOS runners. Command-line checks for testers:
 
 ```bash
 /Applications/BotPeek.app/Contents/MacOS/BotPeek --version
