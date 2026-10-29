@@ -146,16 +146,30 @@ public enum PlainQuestion {
 
     public static func isQuestion(_ text: String) -> Bool {
         // Closing quotes, brackets and emoji may follow the question mark.
-        let trailing = CharacterSet.whitespacesAndNewlines
-            .union(CharacterSet(charactersIn: "\"'”’)]*_"))
-            .union(.symbols)
-        let trimmed = text.trimmingCharacters(in: trailing)
+        // Swift's own Unicode data, unlike Foundation's symbol set on Linux,
+        // covers every emoji.
+        var trimmed = Substring(text)
+        while let last = trimmed.last, isTrailingDecoration(last) { trimmed.removeLast() }
         guard trimmed.hasSuffix("?") || trimmed.hasSuffix("？") else { return false }
         let lastSentence = trimmed.dropLast()
             .split(whereSeparator: { ".!?\n".contains($0) })
             .last.map(String.init)?
             .lowercased() ?? ""
         return !signOffs.contains { lastSentence.contains($0) }
+    }
+
+    /// Whitespace, closing punctuation, and symbols such as emoji (with their
+    /// skin tones, variation selectors and joiners).
+    static func isTrailingDecoration(_ character: Character) -> Bool {
+        if character.isWhitespace || "\"'”’)]*_".contains(character) { return true }
+        return character.unicodeScalars.allSatisfy { scalar in
+            switch scalar.properties.generalCategory {
+            case .mathSymbol, .currencySymbol, .modifierSymbol, .otherSymbol, .nonspacingMark, .enclosingMark, .format:
+                return true
+            default:
+                return false
+            }
+        }
     }
 }
 
