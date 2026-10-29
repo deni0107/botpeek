@@ -2,8 +2,10 @@
 
 ## 0.1.0 — unreleased (beta)
 
-First public beta. Developed without a Mac; native behavior and the live Grok Bot
-integration await verification by beta testers.
+First public beta. Bot discovery and avatars are checked on a real Mac with Grok Bot
+0.78.1; answering, replies and inline approvals await verification by beta testers.
+
+- Never replies to an already-open conversation when another bot has the same name
 
 - Discovers Grok Bot bots, names and avatars (built-in shapes and colors, uploaded images) from Grok Bot's local data, read-only
 - Draws built-in avatars with Grok Bot's own renderer, loaded from the signed, installed Grok Bot at launch; BotPeek's drawings are the fallback. All 26 Grok Bot shapes (incl. `pumpkin`, `leaf`, `shield`…) and its 11 colors and gradients (incl. `violet`, `magenta`) are recognized

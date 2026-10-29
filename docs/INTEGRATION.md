@@ -8,9 +8,9 @@ swapped for an official API if one appears.
 
 | Need | Technique | Source of the technique | Status |
 | --- | --- | --- | --- |
-| Discover bots, names, ids | Read Grok Bot's roster cache (read-only) | djui/grokbot, grokbot-widget | Proven by others; **not yet verified by BotPeek on a real Mac** |
-| Built-in avatar shape/color | `avatarShape`, `avatarColor` roster fields | djui/grokbot | Same |
-| Uploaded avatar | `avatarPhoto.key` → `roster-avatars/<key>` | grokbot-widget | Same |
+| Discover bots, names, ids | Read Grok Bot's roster cache (read-only) | djui/grokbot, grokbot-widget | **Verified** with Grok Bot 0.78.1 |
+| Built-in avatar shape/color | `avatarShape`, `avatarColor` roster fields | djui/grokbot | **Verified** with Grok Bot 0.78.1 |
+| Uploaded avatar | `avatarPhoto.key` → `roster-avatars/<key>` | grokbot-widget | Proven by others; **not yet verified by BotPeek on a real Mac** |
 | Needs-attention signal | `awaitingUserResponse` roster field | djui/grokbot | Same |
 | Secondary attention signal | Sidebar label "…, Waiting for you" via Accessibility | djui/grokbot | Same |
 | Read question & choices | Accessibility tree of Grok Bot's window | grok-bot-mcp | Same |
@@ -18,9 +18,10 @@ swapped for an official API if one appears.
 | Send a text reply | Focus "Prompt", paste, Return; restore clipboard | grok-bot-mcp | Same |
 | Approve / deny | Press the exact approve/deny button, after explicit confirmation | BotPeek | Off by default; unverified |
 
-> **Verification status:** BotPeek was developed without access to a Mac. The parsing
-> and decision logic is covered by automated tests that run in CI on Linux and macOS,
-> but **no part of the live Grok Bot integration has been tested end-to-end yet.**
+> **Verification status:** The parsing and decision logic is covered by automated tests
+> that run in CI on Linux and macOS. On a real Mac with Grok Bot 0.78.1, bot discovery and
+> built-in avatars are verified; **attention detection, question reading, replies and
+> approvals have not been tested end-to-end yet.**
 > See [BETA_TESTING.md](BETA_TESTING.md) to help verify it.
 
 ## Local data (read-only)
