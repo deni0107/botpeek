@@ -10,7 +10,7 @@ struct AvatarSilhouette: Shape {
     func path(in rect: CGRect) -> Path {
         let p = { (x: CGFloat, y: CGFloat) in CGPoint(x: rect.minX + rect.width * x, y: rect.minY + rect.height * y) }
         let w = rect.width
-        switch shape {
+        switch Self.standIn(for: shape) {
         case .classic:
             var path = Path()
             path.move(to: p(0.50, 0.08))
@@ -115,8 +115,23 @@ struct AvatarSilhouette: Shape {
             path.addCurve(to: p(0.30, 0.16), control1: p(0.06, 0.48), control2: p(0.12, 0.26))
             path.closeSubpath()
             return path
-        case .circle:
+        default:
             return Path(ellipseIn: rect.insetBy(dx: w * 0.06, dy: w * 0.06))
+        }
+    }
+
+    /// Grok Bot shapes BotPeek has no drawing of borrow the closest one.
+    /// They are only seen when Grok Bot's own renderer is unavailable.
+    static func standIn(for shape: AvatarShape) -> AvatarShape {
+        switch shape {
+        case .bean: return .pebble
+        case .squircle: return .square
+        case .tablet, .cylinder: return .capsule
+        case .crystal, .shield: return .gem
+        case .dome, .arch: return .house
+        case .leaf: return .teardrop
+        case .pumpkin: return .cloud
+        default: return shape
         }
     }
 
@@ -138,7 +153,7 @@ struct AvatarSilhouette: Shape {
 
     /// Where the face sits inside each shape, as a fraction of the square.
     static func faceCenter(for shape: AvatarShape) -> CGPoint {
-        switch shape {
+        switch standIn(for: shape) {
         case .heart: return CGPoint(x: 0.5, y: 0.46)
         case .star: return CGPoint(x: 0.5, y: 0.55)
         case .teardrop, .egg: return CGPoint(x: 0.5, y: 0.62)

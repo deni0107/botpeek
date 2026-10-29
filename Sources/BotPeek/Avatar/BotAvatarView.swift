@@ -85,7 +85,28 @@ struct BotAvatarView: View {
     }
 }
 
+/// A bot's built-in avatar: drawn by Grok Bot's own renderer when available,
+/// otherwise by BotPeek's vector version of the shape.
 struct BuiltInAvatar: View {
+    let shape: AvatarShape
+    let color: AvatarColor
+    var isHappy = false
+    @ObservedObject private var grok = GrokAvatarRenderer.shared
+
+    var body: some View {
+        if let image = grok.image(shape: shape, color: color, isHappy: isHappy) {
+            Image(nsImage: image)
+                .resizable()
+                .interpolation(.high)
+                .scaledToFit()
+        } else {
+            DrawnAvatar(shape: shape, color: color, isHappy: isHappy)
+        }
+    }
+}
+
+/// BotPeek's own drawing of a built-in avatar.
+struct DrawnAvatar: View {
     let shape: AvatarShape
     let color: AvatarColor
     var isHappy = false

@@ -6,6 +6,8 @@ First public beta. Developed without a Mac; native behavior and the live Grok Bo
 integration await verification by beta testers.
 
 - Discovers Grok Bot bots, names and avatars (built-in shapes and colors, uploaded images) from Grok Bot's local data, read-only
+- Draws built-in avatars with Grok Bot's own renderer, loaded from the signed, installed Grok Bot at launch; BotPeek's drawings are the fallback. All 26 Grok Bot shapes (incl. `pumpkin`, `leaf`, `shield`…) and its 11 colors and gradients (incl. `violet`, `magenta`) are recognized
+- `--render-avatars <folder>` writes every avatar as PNGs for a visual check
 - Shows a character only when a bot is waiting for the user (`awaitingUserResponse`, optional sidebar signal); never for unread, progress or finished states
 - Confirmation delay, fingerprint deduplication, wake grace period, and resolution when answered elsewhere
 - Speech bubble with multiple-choice answers, free-text replies, opt-in two-step inline approvals and "Open in Grok Bot"

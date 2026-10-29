@@ -48,7 +48,27 @@ Location: `~/Library/Application Support/Grok Bot/`
   running app. BotPeek trusts it only if that process is alive.
 
 BotPeek never writes to this folder, never reads anything else in it, and never
-reads credentials. Avatar keys are validated as 32 hex characters so a malformed
+reads credentials.
+
+### Built-in avatar artwork
+
+Grok Bot has no image files for its built-in avatars: its renderer turns a shape
+name, pose, eyes and palette into an SVG in JavaScript. At launch BotPeek:
+
+1. Finds Grok Bot (`com.anysphere.sand`) and checks its code signature
+   (`anchor apple generic` + bundle ID). The signature also seals `app.asar`.
+2. Reads `Contents/Resources/app.asar`'s index and the renderer module under
+   `dist/renderer/assets/` (`AsarArchive`). Nothing is extracted to disk.
+3. Rewrites that ES module and its bundler runtime into one classic script
+   (`GrokAvatarScript`). Minified names change per release, so the renderer, the
+   shape-alias function (`blob` → `sphere`) and the gradient table are found by
+   the shape of their code.
+4. Runs it in a bare JavaScriptCore context (no DOM, files or network), renders
+   two avatars as a self-test, then caches one `NSImage` per shape and color.
+
+If any step fails, BotPeek draws its own avatars and Settings → Connection says
+why. Verified against Grok Bot 0.78.1. `BotPeek --render-avatars <folder>` writes
+every shape and each roster bot's avatar as PNGs for a quick visual check. Avatar keys are validated as 32 hex characters so a malformed
 roster can't point BotPeek at another file.
 
 **Unknowns:** the structure of the `awaitingUserResponse` payload has not been

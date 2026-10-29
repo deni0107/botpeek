@@ -130,6 +130,7 @@ private struct AppearanceSettings: View {
 
 private struct ConnectionSettings: View {
     @ObservedObject var app: AppModel
+    @ObservedObject private var grokAvatars = GrokAvatarRenderer.shared
 
     var body: some View {
         let health = app.health
@@ -157,16 +158,26 @@ private struct ConnectionSettings: View {
                 }
             }
             Section("Avatars") {
+                switch grokAvatars.state {
+                case .ready(let version):
+                    Label("Built-in shapes are drawn with Grok Bot\(version.map { " \($0)" } ?? "")'s own avatar artwork.", systemImage: "checkmark.seal")
+                        .font(.caption)
+                case .unavailable(let reason):
+                    Label("Built-in shapes are BotPeek's own drawings (\(reason)).", systemImage: "paintbrush")
+                        .font(.caption)
+                case .idle, .loading:
+                    EmptyView()
+                }
                 if health.photoAvatarsUnavailable > 0 {
                     Label("\(health.photoAvatarsUnavailable) uploaded avatar(s) couldn't be read from Grok Bot's cache; showing the bot's built-in shape instead.", systemImage: "photo.badge.exclamationmark")
                         .font(.caption)
                 }
                 if !health.unrecognizedAvatarShapes.isEmpty {
-                    Label("Unrecognized avatar shapes: \(health.unrecognizedAvatarShapes.joined(separator: ", ")). These bots use a default outline in their own color.", systemImage: "questionmark.square.dashed")
+                    Label("Unrecognized avatar shapes: \(health.unrecognizedAvatarShapes.joined(separator: ", ")). These bots use a default shape in their own color.", systemImage: "questionmark.square.dashed")
                         .font(.caption)
                 }
                 if health.photoAvatarsUnavailable == 0 && health.unrecognizedAvatarShapes.isEmpty {
-                    Text("Avatars come from Grok Bot's own data. Built-in shapes are redrawn by BotPeek in each bot's color; uploaded images are shown as-is.")
+                    Text("Avatars come from Grok Bot's own data; uploaded images are shown as-is.")
                         .font(.caption).foregroundStyle(.secondary)
                 }
             }

@@ -2,9 +2,10 @@ import Foundation
 
 /// The built-in avatar shapes BotPeek knows how to draw.
 ///
-/// Grok Bot stores a shape *name* per bot. BotPeek draws its own vector version
-/// of each named shape in the bot's color; the artwork is not copied from
-/// Grok Bot, so it is a faithful match of shape and color, not a pixel copy.
+/// Grok Bot stores a shape *name* per bot. When Grok Bot is installed, BotPeek
+/// renders that name with Grok Bot's own avatar code (see `grokBodyName`).
+/// Otherwise it falls back to its own vector version of the shape in the
+/// bot's color; that artwork is not copied from Grok Bot.
 public enum AvatarShape: String, Codable, CaseIterable, Sendable {
     case classic
     case wedge
@@ -23,6 +24,16 @@ public enum AvatarShape: String, Codable, CaseIterable, Sendable {
     case gem
     case pebble
     case circle
+    case bean
+    case squircle
+    case tablet
+    case cylinder
+    case crystal
+    case shield
+    case dome
+    case arch
+    case leaf
+    case pumpkin
 
     /// Shape names observed in Grok Bot's roster, mapped to a drawable shape.
     static let aliases: [String: AvatarShape] = [
@@ -37,12 +48,22 @@ public enum AvatarShape: String, Codable, CaseIterable, Sendable {
         "star": .star, "starflower": .star, "star6": .star,
         "teardrop": .teardrop,
         "egg": .egg,
-        "capsule": .capsule, "tablet": .capsule, "pill": .capsule,
+        "capsule": .capsule, "pill": .capsule,
         "house": .house,
         "hex": .hexagon, "hexagon": .hexagon,
-        "gem": .gem, "crystal": .gem,
+        "gem": .gem,
         "pebble": .pebble,
         "circle": .circle, "sphere": .circle, "dot": .circle,
+        "bean": .bean,
+        "squircle": .squircle,
+        "tablet": .tablet,
+        "cylinder": .cylinder,
+        "crystal": .crystal,
+        "shield": .shield,
+        "dome": .dome,
+        "arch": .arch,
+        "leaf": .leaf,
+        "pumpkin": .pumpkin,
     ]
 
     /// Returns the shape for a stored name and whether the name was recognized.
@@ -55,6 +76,15 @@ public enum AvatarShape: String, Codable, CaseIterable, Sendable {
             return (shape, true)
         }
         return (.classic, false)
+    }
+
+    /// The shape's name in Grok Bot's avatar picker, as stored in the roster.
+    public var grokName: String {
+        switch self {
+        case .classic, .circle: return "blob"
+        case .hexagon: return "hex"
+        default: return rawValue
+        }
     }
 }
 
@@ -79,28 +109,54 @@ public struct AvatarColor: Equatable, Hashable, Codable, Sendable {
         (0.299 * red + 0.587 * green + 0.114 * blue) > 0.7
     }
 
+    /// Grok Bot's avatar colors (its color picker's swatch values).
     static let palette: [String: UInt32] = [
-        "red": 0xFF453A,
-        "orange": 0xFF9F0A,
-        "yellow": 0xFFD60A,
-        "green": 0x30D158,
-        "mint": 0x63E6E2,
-        "teal": 0x40C8E0,
-        "cyan": 0x64D2FF,
-        "blue": 0x0A84FF,
-        "indigo": 0x5E5CE6,
-        "purple": 0xBF5AF2,
-        "pink": 0xFF375F,
-        "brown": 0xAC8E68,
-        "gray": 0x8E8E93,
-        "grey": 0x8E8E93,
-        "black": 0x1C1C1E,
-        "white": 0xF2F2F7,
+        "black": 0x000000,
+        "brown": 0x936439,
+        "red": 0xFF263C,
+        "orange": 0xFF6700,
+        "yellow": 0xFF9800,
+        "green": 0x00C972,
+        "cyan": 0x00BCA6,
+        "blue": 0x1084FE,
+        "violet": 0x9159FE,
+        "magenta": 0xFF309B,
+        "gray": 0x777777,
+    ]
+
+    /// Other color names, mapped to the nearest Grok Bot color.
+    static let aliases: [String: String] = [
+        "grey": "gray", "white": "gray", "silver": "gray",
+        "purple": "violet", "indigo": "violet",
+        "pink": "magenta",
+        "teal": "cyan", "mint": "cyan",
+    ]
+
+    /// Grok Bot's two-stop body gradient per color, (top-left, bottom-right) in
+    /// light appearance. Used when Grok Bot's own table can't be read.
+    static let gradients: [String: (from: UInt32, to: UInt32)] = [
+        "black": (0x585858, 0x000000),
+        "brown": (0xAE8968, 0x855C36),
+        "red": (0xFF5667, 0xE02135),
+        "orange": (0xFF8838, 0xE05B00),
+        "yellow": (0xFFAF38, 0xE08600),
+        "green": (0x1CCF82, 0x009957),
+        "cyan": (0x58D3C5, 0x00A592),
+        "blue": (0x459FFE, 0x0E74E0),
+        "violet": (0xB792FE, 0x804EE0),
+        "magenta": (0xFF77BE, 0xE02A88),
+        "gray": (0xA6A6A6, 0x696969),
     ]
 
     /// Used when the roster stores no color. Orange is what other community
     /// tools observed for unset colors; unverified against Grok Bot itself.
-    public static let defaultColor = AvatarColor(name: "orange", rgb: 0xFF9F0A, isRecognized: true)
+    public static let defaultColor = AvatarColor(name: "orange", rgb: 0xFF6700, isRecognized: true)
+
+    /// The body gradient for this color: Grok Bot's when it is one of Grok
+    /// Bot's colors, otherwise a flat fill.
+    public var gradient: (from: UInt32, to: UInt32) {
+        Self.gradients[name] ?? (rgb, rgb)
+    }
 
     public init(name: String, rgb: UInt32, isRecognized: Bool) {
         self.name = name
@@ -111,10 +167,14 @@ public struct AvatarColor: Equatable, Hashable, Codable, Sendable {
     public static func resolve(_ rawName: String?) -> AvatarColor {
         let name = (rawName ?? "").trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         if name.isEmpty { return defaultColor }
-        if let rgb = palette[name] { return AvatarColor(name: name, rgb: rgb, isRecognized: true) }
+        let canonical = aliases[name] ?? name
+        if let rgb = palette[canonical] { return AvatarColor(name: canonical, rgb: rgb, isRecognized: true) }
         if let rgb = parseHex(name) { return AvatarColor(name: name, rgb: rgb, isRecognized: true) }
-        return AvatarColor(name: name, rgb: 0x8E8E93, isRecognized: false)
+        return AvatarColor(name: name, rgb: 0x777777, isRecognized: false)
     }
+
+    /// Parses `#RRGGBB`.
+    public static func parseHexColor(_ value: String) -> UInt32? { parseHex(value) }
 
     static func parseHex(_ value: String) -> UInt32? {
         var hex = value

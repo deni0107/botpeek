@@ -4,7 +4,7 @@
 Sources/
   BotPeekCore/            Platform-independent logic (Foundation only). Tested on Linux + macOS.
     Model/                Bot, BotIdentity, AvatarDescriptor, AttentionContent, JSONValue
-    Grok/                 GrokBotPaths, RosterParser/Store, AwaitingRequestParser,
+    Grok/                 GrokBotPaths, RosterParser/Store, AsarArchive, GrokAvatarScript, AwaitingRequestParser,
                           AXNodeSnapshot + SidebarParser + BotIdentityMatcher,
                           TranscriptParser + DeliveryVerifier, Integration protocols
     Attention/            AttentionDetector, AttentionEventManager, RequestQueue
@@ -15,7 +15,7 @@ Sources/
     Diagnostics/          DiagnosticsLog (privacy-preserving)
   BotPeek/                The macOS app (AppKit + SwiftUI), guarded by #if canImport(AppKit)
     Grok/                 AXTree, GrokAccessibilityDriver, LiveGrokIntegration
-    Avatar/               AvatarSilhouette shapes, BotAvatarView, image cache
+    Avatar/               GrokAvatarRenderer (Grok Bot's own artwork), AvatarSilhouette fallback, BotAvatarView
     Character/            CharacterPanel, CharacterWindowManager, StageModel, views
     App/                  AppModel, AppDelegate, StatusItemController, Settings, Onboarding
 ```
