@@ -30,11 +30,16 @@ notarize() {
 rm -f "$ZIP" "$DMG" "$DIST/SHA256SUMS.txt"
 
 # Notarize the app itself first (via a temporary zip) so both archives contain a stapled app.
+NOTARIZED=false
 if [[ -n "${APPLE_ID:-}" ]]; then
   ditto -c -k --keepParent "$APP" "$DIST/notarize.zip"
   notarize "$DIST/notarize.zip"
   xcrun stapler staple "$APP"
   rm -f "$DIST/notarize.zip"
+  # Fail here rather than ship an app Gatekeeper would still block.
+  xcrun stapler validate "$APP"
+  spctl --assess --type execute --verbose=2 "$APP"
+  NOTARIZED=true
 fi
 
 echo "==> Creating $(basename "$ZIP")"
@@ -44,15 +49,17 @@ echo "==> Creating $(basename "$DMG")"
 STAGING="$(mktemp -d)"
 cp -R "$APP" "$STAGING/"
 ln -s /Applications "$STAGING/Applications"
-cat > "$STAGING/Read Me First.txt" <<'EOF'
-Drag BotPeek into Applications, then open it from Applications.
-
-If macOS says it can't verify the developer: open System Settings → Privacy & Security,
-scroll down and click "Open Anyway" next to BotPeek. Do not disable Gatekeeper.
-
-BotPeek is free, open source (MIT) and not affiliated with Grok Bot, xAI or Cursor.
-https://github.com/DenisDule/botpeek
-EOF
+{
+  echo "Drag BotPeek into Applications, then open it from Applications."
+  echo
+  if [[ "$NOTARIZED" != true ]]; then
+    echo "If macOS says it can't verify the developer: open System Settings → Privacy & Security,"
+    echo "scroll down and click \"Open Anyway\" next to BotPeek. Do not disable Gatekeeper."
+    echo
+  fi
+  echo "BotPeek is free, open source (MIT) and not affiliated with Grok Bot, xAI or Cursor."
+  echo "https://github.com/DenisDule/botpeek"
+} > "$STAGING/Read Me First.txt"
 hdiutil create -volname "BotPeek $VERSION" -srcfolder "$STAGING" -ov -format UDZO "$DMG"
 rm -rf "$STAGING"
 if [[ -n "${DEVELOPER_ID_APPLICATION:-}" ]]; then
