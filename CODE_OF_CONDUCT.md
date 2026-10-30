@@ -26,13 +26,8 @@ professional setting.
 
 ## Enforcement
 
-Maintainers are responsible for clarifying and enforcing these standards and may remove,
-edit or reject contributions that are not aligned with this Code of Conduct.
-
-Report unacceptable behavior privately to the maintainers through
-[GitHub's private reporting](https://github.com/deni0107/botpeek/security/advisories/new)
-or by contacting a maintainer directly. All complaints will be reviewed and investigated
-promptly and fairly, and the privacy of the reporter will be respected.
+Maintainers may remove, edit or reject contributions, and hide or lock discussions, that
+are not aligned with this Code of Conduct.
 
 Maintainers follow the Contributor Covenant's
 [enforcement guidelines](https://www.contributor-covenant.org/version/2/1/code_of_conduct/#enforcement-guidelines):

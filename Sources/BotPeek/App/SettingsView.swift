@@ -265,10 +265,7 @@ private struct PrivacySettings: View {
                 LabeledContent("Version", value: AppInfo.version)
                 Text("BotPeek is free, open-source software (MIT License). It is an independent community project and is not affiliated with, endorsed by or sponsored by Grok Bot, xAI, SpaceXAI, Anysphere or Cursor.")
                     .font(.caption).foregroundStyle(.secondary)
-                HStack {
-                    Link("Source code", destination: AppInfo.repositoryURL)
-                    Link("Report an issue", destination: AppInfo.issuesURL)
-                }
+                Link("Source code", destination: AppInfo.repositoryURL)
             }
         }
         .formStyle(.grouped)

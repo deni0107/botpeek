@@ -23,8 +23,8 @@ swapped for an official API if one appears.
 > that run in CI on macOS. On a real Mac with Grok Bot 0.78.1, bot discovery,
 > built-in avatars, detecting questions asked with answer buttons, choice and typed
 > replies in the background, and inline approvals of Approve/Deny buttons are verified
-> end-to-end. **Plain-text questions, uploaded avatars and other Grok Bot versions still
-> need testers.** See [BETA_TESTING.md](BETA_TESTING.md) to help verify them.
+> end-to-end. **Plain-text questions, uploaded avatars and other Grok Bot versions are
+> untested.**
 
 ## Local data (read-only)
 
@@ -105,8 +105,8 @@ roster can't point BotPeek at another file.
 waits on a question, so BotPeek relies on the conversation cache above. The
 payload's structure, for versions that do set it, has not been published. `AwaitingRequestParser` looks for common fields (`question`, `prompt`,
 `message`, `options`, `choices`, `type`…) and falls back to "the bot is waiting"
-plus reading the question from the conversation. Beta testers' `--check` output
-(which contains no message text) tells us whether payloads are readable.
+plus reading the question from the conversation. `--check` output (which
+contains no message text) shows whether payloads are readable.
 
 ## Accessibility (Grok Bot's window)
 

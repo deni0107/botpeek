@@ -11,7 +11,6 @@ your Mac's screen, tells you what it needs, takes your reply, and hops back out 
 
 [Download](https://github.com/deni0107/botpeek/releases/latest) ·
 [Try the browser simulator](https://deni0107.github.io/botpeek/) ·
-[Beta testing](docs/BETA_TESTING.md) ·
 [How it works](docs/INTEGRATION.md)
 
 [![CI](https://github.com/deni0107/botpeek/actions/workflows/ci.yml/badge.svg)](https://github.com/deni0107/botpeek/actions/workflows/ci.yml)
@@ -22,12 +21,11 @@ your Mac's screen, tells you what it needs, takes your reply, and hops back out 
 </div>
 
 > [!IMPORTANT]
-> **Beta.** BotPeek has been checked on a real Mac (macOS 26, Grok Bot 0.78.1): it
+> **Beta, provided as is.** BotPeek has been checked on a real Mac (macOS 26, Grok Bot 0.78.1): it
 > finds your bots, reads their names and avatars, draws them with Grok Bot's own
 > renderer, notices questions they ask you, and answers them from the bubble (picking an
 > option or typing a reply) without bringing Grok Bot forward. Other macOS and Grok Bot
-> versions still need testers.
-> [Please help test it](docs/BETA_TESTING.md).
+> versions are untested.
 
 > [!NOTE]
 > BotPeek is an independent, free, open-source community project. It is **not
@@ -116,7 +114,7 @@ background). Details and safety rules:
 | Area | State |
 | --- | --- |
 | Roster parsing, attention detection, dedupe, queue, snooze/dismiss, reply routing & validation, animation plans, placement | Implemented, **100+ automated tests** on macOS CI (Apple silicon and Intel) |
-| Native app: floating characters, bubble, menu bar, settings, onboarding | Implemented, builds in CI; runs on macOS 26, **more beta testing wanted** |
+| Native app: floating characters, bubble, menu bar, settings, onboarding | Implemented, builds in CI; checked on macOS 26 |
 | Live Grok Bot: discovery, names, built-in avatars | **Verified** on a real Mac with Grok Bot 0.78.1 |
 | Live Grok Bot: detecting questions asked in chat (answer buttons) | **Verified** on a real Mac with Grok Bot 0.78.1 |
 | Live Grok Bot: detecting questions asked in plain text | Implemented; message format checked with Grok Bot 0.78.1 |
@@ -152,7 +150,7 @@ swift run BotPeek               # run from the terminal (menu bar app)
 ./scripts/package.sh            # DMG + ZIP + SHA256SUMS.txt
 ```
 
-Every push builds and tests the full app on GitHub's macOS runners. Command-line checks for testers:
+Every push builds and tests the full app on GitHub's macOS runners. Command-line checks for troubleshooting:
 
 ```bash
 /Applications/BotPeek.app/Contents/MacOS/BotPeek --version
@@ -169,7 +167,9 @@ without them the release is ad-hoc signed and its notes explain how to open it.
 
 ## Contributing
 
-Bug reports, beta-test reports and pull requests are welcome. Start with
+BotPeek is a spare-time project, provided as is under the MIT License. Issues and pull
+requests are welcome, but there's no promise of support or fixes; pull requests are the
+surest way to get a change in, and each one is reviewed before it's merged. Start with
 [CONTRIBUTING.md](CONTRIBUTING.md), and see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 Please follow the [Code of Conduct](CODE_OF_CONDUCT.md), and report security issues
 privately ([SECURITY.md](SECURITY.md)).

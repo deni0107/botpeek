@@ -4,7 +4,7 @@
 
 Please **do not** open a public issue. Use
 [GitHub private vulnerability reporting](https://github.com/deni0107/botpeek/security/advisories/new).
-We aim to acknowledge reports within 7 days.
+BotPeek is a spare-time project, so there is no guaranteed response time.
 
 Please include the BotPeek version (`BotPeek --version`), macOS version, and steps to
 reproduce. Do not include real message contents or credentials.
@@ -28,4 +28,4 @@ credentials live only in GitHub Actions secrets.
 
 ## Supported versions
 
-Only the latest release receives fixes during the beta.
+BotPeek is provided as is, without support guarantees. Fixes, if any, land in the latest release.

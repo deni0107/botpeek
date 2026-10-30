@@ -3,7 +3,7 @@ import AppKit
 import SwiftUI
 import BotPeekCore
 
-/// Command-line entry points used by CI smoke tests and beta testers:
+/// Command-line entry points used by CI smoke tests and for troubleshooting:
 ///
 ///     BotPeek.app/Contents/MacOS/BotPeek --version
 ///     BotPeek.app/Contents/MacOS/BotPeek --check

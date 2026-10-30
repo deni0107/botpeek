@@ -1,17 +1,20 @@
 # Contributing to BotPeek
 
-Thanks for helping! BotPeek is small and focused: little characters that appear only
-when a Grok Bot bot needs you, and disappear once you've helped.
+BotPeek is small and focused: little characters that appear only when a Grok Bot bot
+needs you, and disappear once you've helped.
 
-## Ways to help
+It is a spare-time project, provided as is. Issues and pull requests are welcome, but
+there's no promise of a reply, a fix or a release schedule. The surest way to get
+something fixed is to open a pull request. Every pull request is reviewed by the
+maintainer before it is merged.
 
-- **Beta testing on a Mac** is the most valuable contribution right now. See
-  [docs/BETA_TESTING.md](docs/BETA_TESTING.md).
+## Ideas for contributions
+
 - **Avatar accuracy:** BotPeek draws built-in avatars with Grok Bot's own renderer and
   falls back to its own drawings (`Sources/BotPeek/Avatar/AvatarShapes.swift`).
   Screenshots of a wrong or fallback avatar next to Grok Bot's help us fix both.
-- **Grok Bot updates:** if a Grok Bot release breaks detection or replies, open an issue
-  with `BotPeek --check` output and your Grok Bot version.
+- **Grok Bot updates:** a Grok Bot release can break detection or replies. `BotPeek --check`
+  shows what changed; include its output and your Grok Bot version in an issue or PR.
 
 ## Development
 
