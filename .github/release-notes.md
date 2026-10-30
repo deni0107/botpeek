@@ -1,16 +1,5 @@
-## BotPeek beta
+Beta, provided as is. Tested with macOS 26 and Grok Bot 0.78.1. Requires macOS 14 or newer
+(Apple silicon and Intel).
 
-Little characters that peek out from the edge of your Mac's screen when a Grok Bot bot needs you.
-
-**This is a beta, provided as is.** Bot discovery, avatars, question detection, answers (choices,
-multi-select and typed replies) and inline approvals have been checked on a real Mac with Grok
-Bot 0.78.1; other macOS and Grok Bot versions are untested.
-
-### Download
-
-- `BotPeek-…-macos-universal.dmg`: open it and drag BotPeek into Applications (Apple silicon and Intel, macOS 14+)
-- `BotPeek-…-macos-universal.zip`: the same app as a ZIP
-
-No Grok Bot? Turn on **Demo Mode** from the menu bar.
-
-BotPeek is an independent community project, not affiliated with Grok Bot, xAI or Cursor.
+Download the DMG, open it and drag BotPeek into Applications. No Grok Bot? Turn on
+**Demo Mode** from the menu bar.
