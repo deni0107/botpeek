@@ -15,6 +15,8 @@ screen, takes your reply, and hops back out of sight.
 [![CI](https://github.com/deni0107/botpeek/actions/workflows/ci.yml/badge.svg)](https://github.com/deni0107/botpeek/actions/workflows/ci.yml)
 [![MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
+<img src="docs/images/demo.gif" width="800" alt="Bots peek from the screen edge while you work, you answer each with one click, and they hop back out of sight">
+
 <img src="docs/images/peek.png" width="270" alt="A violet bot peeking from the right edge of the screen with a preview of its question">
 <img src="docs/images/choice.png" width="270" alt="The bot's card open, asking which of three vendors to contact, with an answer button for each">
 <img src="docs/images/delivered.png" width="270" alt="The same card after picking Northwind Supply, showing Delivered">
