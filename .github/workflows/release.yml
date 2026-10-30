@@ -143,6 +143,6 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release create "$GITHUB_REF_NAME" release-assets/* \
-            --verify-tag --prerelease \
+            --verify-tag --latest \
             --title "BotPeek $GITHUB_REF_NAME (beta)" \
             --notes-file notes.md
