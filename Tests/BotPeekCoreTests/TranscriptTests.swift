@@ -106,10 +106,10 @@ final class TranscriptParserTests: XCTestCase {
 
     func testInlineQuestionButtons() {
         let ax = AXTreeBuilder()
-        let window = ax.window(sidebar: [], heading: "Tets", messages: [
-            ax.inlineQuestion("Tets", "12:54:10\u{202F}AM", prompt: "How many travelers?", buttons: ["1", "2", "3"]),
+        let window = ax.window(sidebar: [], heading: "Travel Planner", messages: [
+            ax.inlineQuestion("Travel Planner", "12:54:10\u{202F}AM", prompt: "How many travelers?", buttons: ["1", "2", "3"]),
             ax.message("Message from Planner", "1:52:36\u{202F}PM", ["Message from"], buttons: ["Open exchange with Planner"]),
-            ax.inlineQuestion("Tets", "1:56:10\u{202F}PM", prompt: "Which cabin?", buttons: ["Economy", "Business"]),
+            ax.inlineQuestion("Travel Planner", "1:56:10\u{202F}PM", prompt: "Which cabin?", buttons: ["Economy", "Business"]),
         ])
         let question = TranscriptParser.parse(window: window).openQuestion
         XCTAssertEqual(question?.prompt, "Which cabin?", "only the newest message's question counts")
@@ -118,21 +118,21 @@ final class TranscriptParserTests: XCTestCase {
 
     func testOlderInlineQuestionIsNotOpen() {
         let ax = AXTreeBuilder()
-        let window = ax.window(sidebar: [], heading: "Tets", messages: [
-            ax.inlineQuestion("Tets", "12:54:10 AM", prompt: "How many travelers?", buttons: ["1", "2"]),
-            ax.message("Tets", "1:52:40 PM", ["Still here."]),
+        let window = ax.window(sidebar: [], heading: "Travel Planner", messages: [
+            ax.inlineQuestion("Travel Planner", "12:54:10 AM", prompt: "How many travelers?", buttons: ["1", "2"]),
+            ax.message("Travel Planner", "1:52:40 PM", ["Still here."]),
         ])
         XCTAssertNil(TranscriptParser.parse(window: window).openQuestion)
     }
 
     func testSingleInlineButtonNeedsCustomAnswerBox() {
         let ax = AXTreeBuilder()
-        let withBox = ax.window(sidebar: [], heading: "Tets", messages: [
-            ax.inlineQuestion("Tets", "1:00:00 PM", prompt: "Ready?", buttons: ["Yes"]),
+        let withBox = ax.window(sidebar: [], heading: "Travel Planner", messages: [
+            ax.inlineQuestion("Travel Planner", "1:00:00 PM", prompt: "Ready?", buttons: ["Yes"]),
         ])
         XCTAssertEqual(TranscriptParser.parse(window: withBox).openQuestion?.options.map(\.label), ["Yes"])
-        let lone = ax.window(sidebar: [], heading: "Tets", messages: [
-            ax.inlineQuestion("Tets", "1:00:00 PM", prompt: "Ready?", buttons: ["Yes"], customAnswer: false),
+        let lone = ax.window(sidebar: [], heading: "Travel Planner", messages: [
+            ax.inlineQuestion("Travel Planner", "1:00:00 PM", prompt: "Ready?", buttons: ["Yes"], customAnswer: false),
         ])
         XCTAssertNil(TranscriptParser.parse(window: lone).openQuestion, "a lone button could be a link or action")
     }

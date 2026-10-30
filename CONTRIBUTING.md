@@ -7,16 +7,17 @@ when a Grok Bot bot needs you, and disappear once you've helped.
 
 - **Beta testing on a Mac** is the most valuable contribution right now. See
   [docs/BETA_TESTING.md](docs/BETA_TESTING.md).
-- **Avatar accuracy:** screenshots comparing a Grok Bot avatar with BotPeek's drawing
-  (`Sources/BotPeek/Avatar/AvatarShapes.swift`) help us match the built-in shapes.
+- **Avatar accuracy:** BotPeek draws built-in avatars with Grok Bot's own renderer and
+  falls back to its own drawings (`Sources/BotPeek/Avatar/AvatarShapes.swift`).
+  Screenshots of a wrong or fallback avatar next to Grok Bot's help us fix both.
 - **Grok Bot updates:** if a Grok Bot release breaks detection or replies, open an issue
   with `BotPeek --check` output and your Grok Bot version.
 
 ## Development
 
 ```bash
-swift test                 # core + app build; works on macOS
-swift run BotPeek          # run the menu bar app from source (macOS)
+swift test                 # core tests + app build
+swift run BotPeek          # run the menu bar app from source
 ```
 
 macOS ties the Accessibility permission to an ad-hoc-signed app's exact build, so
@@ -25,12 +26,6 @@ every rebuild needs it granted again. Sign with any certificate in your keychain
 
 ```bash
 DEVELOPER_ID_APPLICATION="Apple Development: Your Name (TEAMID)" ./scripts/build-app.sh
-```
-
-Without a Mac you can run the core tests in Docker:
-
-```bash
-docker run --rm -v "$PWD:/src" -w /src swift:6.0-jammy swift test
 ```
 
 - `BotPeekCore` must stay Foundation-only, free of AppKit and SwiftUI. Put decisions there

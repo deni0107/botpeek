@@ -11,10 +11,10 @@ swapped for an official API if one appears.
 | Discover bots, names, ids | Read Grok Bot's roster cache (read-only) | djui/grokbot, grokbot-widget | **Verified** with Grok Bot 0.78.1 |
 | Built-in avatar shape/color | `avatarShape`, `avatarColor` roster fields | djui/grokbot | **Verified** with Grok Bot 0.78.1 |
 | Uploaded avatar | `avatarPhoto.key` → `roster-avatars/<key>` | grokbot-widget | Proven by others; **not yet verified by BotPeek on a real Mac** |
-| Needs-attention signal | `awaitingUserResponse` roster field | djui/grokbot | Same; not set by Grok Bot 0.78.1 for questions asked in chat |
+| Needs-attention signal | `awaitingUserResponse` roster field | djui/grokbot | Field present; not set by Grok Bot 0.78.1 for questions asked in chat |
 | Open questions, approvals, forms | Latest entry of the bot's cached conversation (read-only) | BotPeek | **Verified** detection with Grok Bot 0.78.1 |
-| Secondary attention signal | Sidebar label "…, Waiting for you" via Accessibility | djui/grokbot | Same |
-| Read question & choices | Accessibility tree of Grok Bot's window | grok-bot-mcp | Same |
+| Secondary attention signal | Sidebar label "…, Waiting for you" via Accessibility | djui/grokbot | Proven by others; not yet verified by BotPeek on a real Mac |
+| Read question & choices | Accessibility tree of Grok Bot's window | grok-bot-mcp | **Verified** with Grok Bot 0.78.1 |
 | Answer a multiple-choice question | Press the choice button via Accessibility, nudging until it is sent | grok-bot-mcp | **Verified** in the background with Grok Bot 0.78.1 |
 | Send a text reply | Set "Prompt"'s text via Accessibility, press "Send message" (fallback: focus, paste, Return; restore clipboard) | BotPeek (fallback: grok-bot-mcp) | **Verified** in the background with Grok Bot 0.78.1 |
 | Approve / deny | Press the exact approve/deny button, after explicit confirmation | BotPeek | Off by default; **verified** for Approve/Deny answer buttons with Grok Bot 0.78.1 |
@@ -165,7 +165,7 @@ Landmarks used (from grok-bot-mcp):
 - Text replies are sent in the background by default: BotPeek sets the message
   box's text through Accessibility, waits for Grok Bot's `Send message` button
   (it appears only once there is text), and presses it. If Grok Bot ignores the
-  text, BotPeek clears the box and says so; Settings → Advanced → Reply delivery
+  text, BotPeek clears the box and says so; Settings → Connection → Reply delivery
   can switch to pasting, which brings Grok Bot forward for about a second and then
   returns to the previous app.
 

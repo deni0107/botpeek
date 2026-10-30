@@ -11,7 +11,7 @@ demo mode.
 
 ## 1. Install
 
-1. Download the latest `.dmg` from [Releases](https://github.com/DenisDule/botpeek/releases).
+1. Download the latest `.dmg` from [Releases](https://github.com/deni0107/botpeek/releases).
 2. Optional: verify the checksum in Terminal: `shasum -a 256 ~/Downloads/BotPeek-*.dmg`
    and compare with the release notes.
 3. Open the DMG and drag **BotPeek** into **Applications**.
@@ -42,8 +42,8 @@ Mark each item ✅ / ❌ / ➖ (not tested) in your report.
 ### B. Real Grok Bot (most valuable)
 - [ ] Settings → Connection shows Grok Bot installed/running/signed in and the right bot count.
 - [ ] Avatars match Grok Bot: built-in shapes and colors, uploaded photos, transparent images.
-      **Please attach a screenshot comparing both** — the built-in shapes are BotPeek's own
-      drawings and we need your help to make them match.
+      If one doesn't match, **please attach a screenshot comparing both**, and say what
+      Settings → Connection shows for avatar artwork.
 - [ ] Ask a bot something that makes it ask you a question, both with answer buttons and
       in a plain message ("ask me in plain text…"). Does the character appear?
       How long after Grok Bot shows it?
@@ -51,8 +51,9 @@ Mark each item ✅ / ❌ / ➖ (not tested) in your report.
 - [ ] Grant Accessibility (Settings → Connection → Grant Access). Does the bubble show the
       real question text and choices?
 - [ ] Answer a multiple-choice question from BotPeek. Did the right bot get the right answer?
-- [ ] Send a free-text reply. Did it land in the right conversation? Was your clipboard restored?
-      Did focus return to your previous app?
+- [ ] Send a free-text reply. Did it land in the right conversation without Grok Bot coming
+      forward? If you switch Settings → Connection → Reply delivery to Paste: was your clipboard
+      restored, and did focus return to your previous app?
 - [ ] Answer a question directly in Grok Bot instead: the character should leave by itself.
 - [ ] Two bots waiting at once: correct names/avatars/questions for each.
 - [ ] Put the Mac to sleep with a question pending, wake it: no duplicate or stale popups.
@@ -72,7 +73,7 @@ Diagnostics contain events, error codes and counts — **never message text or b
 - **System log** (more detail, last 30 minutes):
 
   ```bash
-  log show --last 30m --predicate 'subsystem == "io.github.denisdule.botpeek"' --info --debug
+  log show --last 30m --predicate 'subsystem == "io.github.deni0107.botpeek"' --info --debug
   ```
 
 Please also include your macOS version, Mac model (Apple silicon or Intel) and Grok Bot
@@ -80,7 +81,7 @@ version (Grok Bot → About).
 
 ## 4. Report
 
-Open a [Beta test report](https://github.com/DenisDule/botpeek/issues/new?template=beta_report.yml).
+Open a [Beta test report](https://github.com/deni0107/botpeek/issues/new?template=beta_report.yml).
 Check screenshots for private information (bot names, message text) before attaching.
 Report security problems privately as described in [SECURITY.md](../SECURITY.md).
 
@@ -89,5 +90,6 @@ Report security problems privately as described in [SECURITY.md](../SECURITY.md)
 - Not notarized, so macOS asks for confirmation on first launch.
 - Ad-hoc signed: after each update macOS treats BotPeek as a new app, so you need to
   turn Accessibility on again (remove the old BotPeek entry with "–" first).
-- Built-in avatar shapes are approximations drawn by BotPeek from the shape name.
+- If Grok Bot isn't installed or an update changes its avatar code, built-in avatars fall
+  back to approximations drawn by BotPeek.
 - English-language Grok Bot UI assumed for reading the conversation (sender "You").

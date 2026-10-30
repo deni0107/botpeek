@@ -20,7 +20,7 @@ Sources/
     App/                  AppModel, AppDelegate, StatusItemController, Settings, Onboarding
 ```
 
-## The components named in the brief
+## Main components
 
 | Component | Where |
 | --- | --- |

@@ -3,7 +3,7 @@
 ## Reporting a vulnerability
 
 Please **do not** open a public issue. Use
-[GitHub private vulnerability reporting](https://github.com/DenisDule/botpeek/security/advisories/new).
+[GitHub private vulnerability reporting](https://github.com/deni0107/botpeek/security/advisories/new).
 We aim to acknowledge reports within 7 days.
 
 Please include the BotPeek version (`BotPeek --version`), macOS version, and steps to

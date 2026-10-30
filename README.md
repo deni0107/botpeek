@@ -9,12 +9,12 @@
 When one of your bots needs an answer or an approval, it peeks out from the edge of
 your Mac's screen, tells you what it needs, takes your reply, and hops back out of sight.
 
-[Download](https://github.com/DenisDule/botpeek/releases/latest) ·
-[Try the browser simulator](https://denisdule.github.io/botpeek/) ·
+[Download](https://github.com/deni0107/botpeek/releases/latest) ·
+[Try the browser simulator](https://deni0107.github.io/botpeek/) ·
 [Beta testing](docs/BETA_TESTING.md) ·
 [How it works](docs/INTEGRATION.md)
 
-[![CI](https://github.com/DenisDule/botpeek/actions/workflows/ci.yml/badge.svg)](https://github.com/DenisDule/botpeek/actions/workflows/ci.yml)
+[![CI](https://github.com/deni0107/botpeek/actions/workflows/ci.yml/badge.svg)](https://github.com/deni0107/botpeek/actions/workflows/ci.yml)
 ![macOS 14+](https://img.shields.io/badge/macOS-14%2B-black?logo=apple)
 ![Universal](https://img.shields.io/badge/Apple%20silicon%20%2B%20Intel-universal-blue)
 [![MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
@@ -35,7 +35,7 @@ your Mac's screen, tells you what it needs, takes your reply, and hops back out 
 
 <p align="center">
   <img src="docs/images/simulator-choice.png" width="720" alt="Browser simulator: a blue cloud-shaped bot peeking from the right edge of a desktop, asking which of three vendors to contact, with three answer buttons">
-  <br><sub>Design preview from the <a href="https://denisdule.github.io/botpeek/">browser simulator</a>, not a screenshot of the native app. Native screenshots will replace these once beta testers confirm the app on a Mac.</sub>
+  <br><sub>Design preview from the <a href="https://deni0107.github.io/botpeek/">browser simulator</a>, not a screenshot of the native app.</sub>
 </p>
 
 <p align="center">
@@ -81,7 +81,7 @@ your Mac's screen, tells you what it needs, takes your reply, and hops back out 
 ## Install
 
 1. Download `BotPeek-x.y.z-macos-universal.dmg` from the
-   [latest release](https://github.com/DenisDule/botpeek/releases/latest). It runs on Apple
+   [latest release](https://github.com/deni0107/botpeek/releases/latest). It runs on Apple
    silicon and Intel Macs with macOS 14 Sonoma or newer.
 2. Open it and drag **BotPeek** into **Applications**.
 3. Open BotPeek. Until releases are notarized, macOS will say it can't verify the developer:
@@ -135,7 +135,7 @@ open conversation in the background; ad-hoc-signed updates need Accessibility re
 [`simulator/`](simulator/index.html) is an interactive, browser-based mock-up of the
 design: entrance and exit animations, bubbles, choices, text replies, approvals, the queue,
 edges, sizes, animation levels and dark mode. It is published at
-**https://denisdule.github.io/botpeek/** and clearly labelled as a simulator. It shares no
+**https://deni0107.github.io/botpeek/** and clearly labelled as a simulator. It shares no
 code with the app and cannot talk to Grok Bot.
 
 ## Build from source
@@ -144,7 +144,7 @@ You only need this to develop BotPeek. Requires macOS 14+ with Xcode 16 (or the 
 command-line tools).
 
 ```bash
-git clone https://github.com/DenisDule/botpeek.git
+git clone https://github.com/deni0107/botpeek.git
 cd botpeek
 swift test                      # all tests
 swift run BotPeek               # run from the terminal (menu bar app)

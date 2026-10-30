@@ -5,39 +5,45 @@
 First public beta. Bot discovery, avatars, question detection, answers (choices, multi-select
 and typed replies) and inline approvals are checked on a real Mac with Grok Bot 0.78.1.
 
-- Faster: a question appears about 0.1 s after Grok Bot saves it (was up to 2 s), and a plain-text question right when its quiet period ends. Answers show *Delivered* 0.5–1.1 s after you click (was 3–3.5 s)
-- Shows questions bots ask in plain text, not only those with answer buttons, once the bot has been quiet for a few seconds; sign-offs like "Anything else?" don't count. Settings → General can turn this off
-- Multi-select questions show checkboxes and send the picked options together
-- Answers no longer fail with "Couldn't find the question" when the bot's conversation is already open in a background Grok Bot window
-- Closing the bubble (Esc, ✕ or ⌃⌥B) gives the keyboard back to the app you were using
-- VoiceOver, Voice Control and Switch Control can open a request from the character and switch to waiting bots
-- Long questions and long option labels scroll inside the bubble instead of being cut off; "Show full request" appears only when text is actually cut off
-- Bigger click targets for the request switcher, snooze, dismiss and close buttons
-- Sign-in forms and approvals offer one clear way to Grok Bot, with calmer wording and icon
-- Demo mode keeps its own queue: dismissed sample bots come back on replay, and leaving the demo keeps your real snoozes and wait times
-- The bubble's tail is drawn as part of the bubble
-
-- Detects questions, approvals and forms from Grok Bot's cached conversations: Grok Bot 0.78.1 doesn't set `awaitingUserResponse` for questions asked in chat. Approvals and forms open in Grok Bot only
-- Opens the right conversation when Grok Bot is in the background (0.78.1 applied each Accessibility press one press late) and recognizes 0.78.1's inline answer buttons
-- Opening a request in Grok Bot snoozes its character, so it doesn't hover while you answer there; it resolves when Grok Bot marks it done
-- Typed replies are sent in the background by default, without bringing Grok Bot forward; pasting is the fallback in Settings
-- `--probe-open <bot log tag>` shows each step of opening a bot's conversation, without names
-- Never replies to an already-open conversation when another bot has the same name
+### Bots and avatars
 
 - Discovers Grok Bot bots, names and avatars (built-in shapes and colors, uploaded images) from Grok Bot's local data, read-only
 - Draws built-in avatars with Grok Bot's own renderer, loaded from the signed, installed Grok Bot at launch; BotPeek's drawings are the fallback. All 26 Grok Bot shapes (incl. `pumpkin`, `leaf`, `shield`…) and its 11 colors and gradients (incl. `violet`, `magenta`) are recognized
-- `--render-avatars <folder>` writes every avatar as PNGs for a visual check
-- Shows a character only when a bot is waiting for the user (`awaitingUserResponse`, optional sidebar signal); never for unread, progress or finished states
+
+### Detecting requests
+
+- Shows a character only when a bot is waiting for the user; never for unread, progress or finished states
+- Detects questions, approvals and forms from Grok Bot's cached conversations as well as the roster's `awaitingUserResponse` field (which Grok Bot 0.78.1 doesn't set for questions asked in chat), with an optional sidebar signal
+- Shows questions bots ask in plain text once the bot has been quiet for a few seconds; sign-offs like "Anything else?" don't count. Settings → General can turn this off
+- A question appears about 0.1 s after Grok Bot saves it
 - Confirmation delay, fingerprint deduplication, wake grace period, and resolution when answered elsewhere
-- Speech bubble with multiple-choice answers, free-text replies, opt-in two-step inline approvals and "Open in Grok Bot"
-- Reply delivery through Accessibility with exact bot matching, heading checks, draft protection and verification before "Delivered"
+
+### Answering
+
+- Speech bubble with multiple-choice answers, multi-select checkboxes, free-text replies, opt-in two-step inline approvals and "Open in Grok Bot"
+- Typed replies and answer buttons are delivered through Accessibility in the background, without bringing Grok Bot forward; pasting is the fallback in Settings
+- *Delivered* is shown only after BotPeek sees the reply in the right conversation, usually within about a second
+- Exact bot matching, heading checks and draft protection; never replies to an open conversation when another bot has the same name
+- Sign-in forms and approvals open in Grok Bot, which snoozes the character until Grok Bot marks them done
+
+### Characters and queue
+
 - Queue for several bots, newest first, with the others peeking out in a stack beside the active character (hover for name and wait time, click to switch); snooze, dismiss, menu-bar list with wait times
 - Bubble tucks away after 30 s idle, gentle reminder wiggles, quick snooze/dismiss on hover
-- Keyboard: ⌃⌥B global shortcut, 1–9 for answers, ⌘[ ⌘] ⌘L ⌘D ⌘O in the bubble
+- Long questions and option labels scroll inside the bubble
 - Drag the character along the edge; it follows the pointer to another display
-- Pause characters from the menu bar; hide from screenshots and screen sharing (best effort)
 - Right, bottom or left edge; multiple displays, Spaces and full screen; sizes; lively/subtle/minimal animation; Reduce Motion
-- Settings, first-run onboarding, Accessibility diagnostics, privacy-preserving diagnostics export, `--version` and `--check`
-- Demo mode with clearly labelled sample bots
+- Pause characters from the menu bar; hide from screenshots and screen sharing (best effort)
+
+### Keyboard and accessibility
+
+- ⌃⌥B global shortcut, 1–9 for answers, ⌘[ ⌘] ⌘L ⌘D ⌘O in the bubble; closing the bubble gives the keyboard back to the app you were using
+- VoiceOver, Voice Control and Switch Control can open a request from the character and switch to waiting bots
+
+### App and tooling
+
+- Settings, first-run onboarding, Accessibility diagnostics and privacy-preserving diagnostics export
+- Demo mode with clearly labelled sample bots and its own queue, separate from your real requests
+- `--version`, `--check`, `--probe-open <bot log tag>` and `--render-avatars <folder>` for troubleshooting
 - Browser-based design simulator
 - CI on macOS (Apple silicon and Intel); universal DMG/ZIP releases with SHA-256 checksums; optional signing and notarization

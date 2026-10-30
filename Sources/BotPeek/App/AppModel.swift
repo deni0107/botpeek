@@ -505,8 +505,8 @@ enum AppInfo {
         #endif
     }
 
-    static let repositoryURL = URL(string: "https://github.com/DenisDule/botpeek")!
-    static let issuesURL = URL(string: "https://github.com/DenisDule/botpeek/issues/new/choose")!
+    static let repositoryURL = URL(string: "https://github.com/deni0107/botpeek")!
+    static let issuesURL = URL(string: "https://github.com/deni0107/botpeek/issues/new/choose")!
 }
 
 enum SystemLinks {

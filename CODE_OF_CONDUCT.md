@@ -30,7 +30,7 @@ Maintainers are responsible for clarifying and enforcing these standards and may
 edit or reject contributions that are not aligned with this Code of Conduct.
 
 Report unacceptable behavior privately to the maintainers through
-[GitHub's private reporting](https://github.com/DenisDule/botpeek/security/advisories/new)
+[GitHub's private reporting](https://github.com/deni0107/botpeek/security/advisories/new)
 or by contacting a maintainer directly. All complaints will be reviewed and investigated
 promptly and fairly, and the privacy of the reporter will be respected.
 

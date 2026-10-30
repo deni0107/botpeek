@@ -65,9 +65,6 @@ public enum DeliveryMethod: String, Codable, CaseIterable, Sendable {
     /// Bring Grok Bot forward, paste into the message box, press Return, then
     /// restore the clipboard and the app the user was in. A fallback for Grok
     /// Bot versions that ignore Accessibility text.
-    ///
-    /// Stored values from before 0.1.0 (`pasteAndReturn`, `backgroundExperimental`)
-    /// no longer decode, so those settings move to the `background` default.
     case paste
 
     public var title: String {

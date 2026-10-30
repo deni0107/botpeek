@@ -58,7 +58,7 @@ ln -s /Applications "$STAGING/Applications"
     echo
   fi
   echo "BotPeek is free, open source (MIT) and not affiliated with Grok Bot, xAI or Cursor."
-  echo "https://github.com/DenisDule/botpeek"
+  echo "https://github.com/deni0107/botpeek"
 } > "$STAGING/Read Me First.txt"
 hdiutil create -volname "BotPeek $VERSION" -srcfolder "$STAGING" -ov -format UDZO "$DMG"
 rm -rf "$STAGING"

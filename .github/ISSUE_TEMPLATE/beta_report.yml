@@ -5,7 +5,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thank you for testing! Follow the plan in [docs/BETA_TESTING.md](https://github.com/DenisDule/botpeek/blob/main/docs/BETA_TESTING.md).
+        Thank you for testing! Follow the plan in [docs/BETA_TESTING.md](https://github.com/deni0107/botpeek/blob/main/docs/BETA_TESTING.md).
         Mark items ✅ works, ❌ broken, ➖ not tested. Remove private information from screenshots.
   - type: input
     id: versions
