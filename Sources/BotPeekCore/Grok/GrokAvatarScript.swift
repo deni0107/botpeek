@@ -115,6 +115,8 @@ public struct GrokAvatarScript: Equatable, Sendable {
     /// A JavaScript expression that renders one avatar, evaluated against the
     /// object the script returns (bound as `g`). Shape and color names come
     /// from Grok Bot's roster, so they are passed as JSON string literals.
+    /// Grok Bot's quaternions are `[w, x, y, z]`, so the upright pose is
+    /// `[1, 0, 0, 0]` (`[0, 0, 0, 1]` would spin the avatar 180°).
     public static func renderCall(shape: AvatarShape, color: AvatarColor, isHappy: Bool, id: String, size: Int = 256) -> String {
         let body = jsonString(shape.grokName)
         let paint = jsonString("url(#\(id)-ink)")
@@ -123,7 +125,7 @@ public struct GrokAvatarScript: Equatable, Sendable {
             : "{oval:[0.13,0.285],off:[0,0],lidY:1,tilt:0,wid:0,ovalMix:1,pts:[]}"
         return """
         (function(){var b=\(body);var e=\(eye);\
-        var s={bodies:[{body:(g.alias?g.alias(b):b),weight:1}],quat:[0,0,0,1],zoom:0.8,offset:[0,0],\
+        var s={bodies:[{body:(g.alias?g.alias(b):b),weight:1}],quat:[1,0,0,0],zoom:0.8,offset:[0,0],\
         squash:[1,1],squashAnchor:0,eyes:[e,e],glow:null};\
         var p={ink:[0,0,0],spot:[0,0,0],cutout:false,inkPaint:\(paint),spotPaint:"#FFFFFF"};\
         return g.render(s,p,\(size),\(jsonString(id)));})()

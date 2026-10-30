@@ -98,6 +98,7 @@ final class GrokAvatarScriptTests: XCTestCase {
         let call = GrokAvatarScript.renderCall(shape: .pumpkin, color: .defaultColor, isHappy: false, id: "a\"b")
         XCTAssertTrue(call.contains(#"var b="pumpkin""#))
         XCTAssertTrue(call.contains(#""a\"b""#), "ids are JSON-escaped, never spliced raw")
+        XCTAssertTrue(call.contains("quat:[1,0,0,0]"), "Grok Bot's quaternions are [w, x, y, z]; anything else draws the avatar rotated")
     }
 
     #if canImport(JavaScriptCore)

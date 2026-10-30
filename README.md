@@ -10,14 +10,15 @@ When a bot needs an answer or an approval, it peeks out from the edge of your Ma
 screen, takes your reply, and hops back out of sight.
 
 [Download](https://github.com/deni0107/botpeek/releases/latest) ·
-[Browser simulator](https://deni0107.github.io/botpeek/) ·
 [How it works](docs/INTEGRATION.md)
 
 [![CI](https://github.com/deni0107/botpeek/actions/workflows/ci.yml/badge.svg)](https://github.com/deni0107/botpeek/actions/workflows/ci.yml)
 [![MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-<img src="docs/images/simulator-choice.png" width="720" alt="A blue bot peeking from the right edge of a desktop, asking which of three vendors to contact">
-<br><sub>Preview from the browser simulator.</sub>
+<img src="docs/images/peek.png" width="270" alt="A violet bot peeking from the right edge of the screen with a preview of its question">
+<img src="docs/images/choice.png" width="270" alt="The bot's card open, asking which of three vendors to contact, with an answer button for each">
+<img src="docs/images/delivered.png" width="270" alt="The same card after picking Northwind Supply, showing Delivered">
+<br><sub>A real Grok Bot question in BotPeek on macOS 26: it peeks, you answer, it's delivered.</sub>
 
 </div>
 
