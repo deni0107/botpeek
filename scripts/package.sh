@@ -27,6 +27,18 @@ notarize() {
   return 1
 }
 
+# Apple's ticket service often isn't ready to serve a ticket the moment
+# notarization is accepted, so stapling right away can fail; retry for a while.
+staple() {
+  local file="$1" attempt
+  for attempt in 1 2 3 4 5 6 7 8; do
+    xcrun stapler staple "$file" && return 0
+    echo "Stapling failed (attempt $attempt); retrying in 30s"
+    sleep 30
+  done
+  xcrun stapler staple "$file"
+}
+
 rm -f "$ZIP" "$DMG" "$DIST/SHA256SUMS.txt"
 
 # Notarize the app itself first (via a temporary zip) so both archives contain a stapled app.
@@ -34,7 +46,7 @@ NOTARIZED=false
 if [[ -n "${APPLE_ID:-}" ]]; then
   ditto -c -k --keepParent "$APP" "$DIST/notarize.zip"
   notarize "$DIST/notarize.zip"
-  xcrun stapler staple "$APP"
+  staple "$APP"
   rm -f "$DIST/notarize.zip"
   # Fail here rather than ship an app Gatekeeper would still block.
   xcrun stapler validate "$APP"
@@ -65,7 +77,7 @@ rm -rf "$STAGING"
 if [[ -n "${DEVELOPER_ID_APPLICATION:-}" ]]; then
   codesign --force --timestamp --sign "$DEVELOPER_ID_APPLICATION" "$DMG"
 fi
-if notarize "$DMG"; then xcrun stapler staple "$DMG"; fi
+if notarize "$DMG"; then staple "$DMG"; fi
 
 echo "==> Checksums"
 (cd "$DIST" && shasum -a 256 "$(basename "$DMG")" "$(basename "$ZIP")" | tee SHA256SUMS.txt)
